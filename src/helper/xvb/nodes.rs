@@ -214,7 +214,7 @@ impl Pool {
         pub_api_xvb: &Arc<Mutex<PubXvbApi>>,
         process: ProcessName,
     ) {
-        if contains_error(&line) || contains_timeout(&line) {
+        if contains_error(line) || contains_timeout(line) {
             let current_node = pub_api_xvb.lock().unwrap().current_pool.clone();
             if let Some(current_node) = current_node {
                 // updating current node to None, will stop sending signal of FailedNode until new node is set
@@ -226,10 +226,10 @@ impl Pool {
                 pub_api_xvb.lock().unwrap().current_pool = None;
             }
         }
-        if contains_usepool(&line) {
+        if contains_usepool(line) {
             // need to update current pool because it was updated.
             // if custom pool made by user, it is not supported because algo is deciding which pool to use.
-            let pool = detect_pool_xmrig(&line, proxy_port, p2pool_port);
+            let pool = detect_pool_xmrig(line, proxy_port, p2pool_port);
 
             if pool.is_none() {
                 error!("{process} PTY Parse | pool is not understood, switching to backup.");

@@ -165,7 +165,7 @@ impl crate::app::App {
                         if cfg!(windows) && self.error_state.buttons == ErrorButtons::WindowsAdmin {
                             ui.add_sized([width, height], Hyperlink::from_label_and_url(
 								"[Why does Gupax need to be Admin? (on Windows)]",
-								"https://github.com/Cyrix126/gupax/tree/main/src#why-does-gupax-need-to-be-admin-on-windows"
+								"https://github.com/gupax-io/gupax/tree/main/ADMIN.md"
 							));
                             ui.add_sized([width, height], Label::new(&self.error_state.msg))
                         } else {

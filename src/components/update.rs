@@ -56,7 +56,7 @@ use zip::ZipArchive;
 // Example: https://github.com/hinto-janai/gupax/releases/download/v0.0.1/gupax-v0.0.1-linux-standalone-x64.tar.gz
 //
 
-const GUPAX_METADATA: &str = "https://api.github.com/repos/Cyrix126/gupax/releases/latest";
+const GUPAX_METADATA: &str = "https://api.github.com/repos/gupax-io/gupax/releases/latest";
 
 cfg_if::cfg_if! {
      if #[cfg(target_family = "unix")] {
@@ -130,7 +130,7 @@ const MSG_DOWNLOAD: &str = "Downloading packages";
 const MSG_EXTRACT: &str = "Extracting packages";
 const MSG_UPGRADE: &str = "Upgrading packages";
 pub const MSG_FAILED: &str = "Update failed";
-pub const MSG_FAILED_HELP: &str = "Consider manually replacing your executable from github releases: https://github.com/Cyrix126/gupax/releases";
+pub const MSG_FAILED_HELP: &str = "Consider manually replacing your executable from github releases: https://github.com/gupax-io/gupax/releases";
 const INIT: &str = "------------------- Init -------------------";
 const METADATA: &str = "----------------- Metadata -----------------";
 const COMPARE: &str = "----------------- Compare ------------------";
@@ -460,7 +460,7 @@ impl Update {
             "standalone"
         };
         let link = [
-            "https://github.com/Cyrix126/gupax/releases/download/",
+            "https://github.com/gupax-io/gupax/releases/download/",
             &version,
             "/gupax-",
             &version,

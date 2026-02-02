@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+// Hide the Window console for release mode
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 // Only (windows|macos|linux) + (x64|arm64) are supported.
 #[cfg(not(target_pointer_width = "64"))]
 compile_error!("gupax is only compatible with 64-bit CPUs");

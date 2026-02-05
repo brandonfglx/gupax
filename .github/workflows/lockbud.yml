@@ -20,7 +20,7 @@ jobs:
          cargo install --path .
          cd ..
          cargo clean
-         cargo lockbud -k deadlock -l gupaxx  &> >(tee  log.out)
+         cargo lockbud -k deadlock -l gupax  &> >(tee  log.out)
          if grep -q "WARN" log.out; then
           echo "Lockbud warnings found:"
           echo "$output"

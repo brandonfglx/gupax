@@ -27,7 +27,7 @@ If Gupaxx is crashing, you may have a file here:
 
 - Windows: `C:\Users\YOUR_USER_NAME\AppData\Roaming\Gupaxx\crash.txt`
 - macOS: `/Users/YOUR_USER_NAME/Library/Application Support/Gupaxx/crash.txt`
-- Linux: `/home/YOUR_USER_NAME/.local/share/gupaxx/crash.txt`
+- Linux: `/home/YOUR_USER_NAME/.local/share/gupax/crash.txt`
 
 If you do, please upload or copy-paste `crash.txt` here:
 ```

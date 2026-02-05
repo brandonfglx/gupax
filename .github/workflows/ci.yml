@@ -57,15 +57,15 @@ jobs:
           tar -cf macos.tar Gupaxx-macos-arm64.app Gupaxx-macos-x64.app Gupaxx-macos-arm64.app_b Gupaxx-macos-x64.app_b
         elif [ "$RUNNER_OS" == "Linux" ]; then
           cargo build --release --target x86_64-unknown-linux-gnu
-          mv target/x86_64-unknown-linux-gnu/release/gupaxx .
+          mv target/x86_64-unknown-linux-gnu/release/gupax .
           cargo build --release --target x86_64-unknown-linux-gnu --features=bundle
-          mv target/x86_64-unknown-linux-gnu/release/gupaxx gupaxx_b
-          tar -cf linux.tar gupaxx gupaxx_b
+          mv target/x86_64-unknown-linux-gnu/release/gupax gupax_b
+          tar -cf linux.tar gupax gupax_b
           cargo build --release --target x86_64-pc-windows-gnu
-          mv target/x86_64-pc-windows-gnu/release/gupaxx.exe .
+          mv target/x86_64-pc-windows-gnu/release/gupax.exe .
           cargo build --release --target x86_64-pc-windows-gnu --features=bundle
-          mv target/x86_64-pc-windows-gnu/release/gupaxx.exe gupaxx_b.exe
-          tar -cf windows.tar gupaxx.exe gupaxx_b.exe
+          mv target/x86_64-pc-windows-gnu/release/gupax.exe gupax_b.exe
+          tar -cf windows.tar gupax.exe gupax_b.exe
         fi
       shell: bash
 

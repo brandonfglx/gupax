@@ -17,6 +17,9 @@ impl eframe::App for App {
         // *-------*
         // | DEBUG |
         // *-------*
+        if mitigate_wgpu_mem_leak(ctx) {
+            return;
+        }
         debug!("App | ----------- Start of [update()] -----------");
         // If closing
         self.quit(ctx);
@@ -179,4 +182,17 @@ impl ProcessStatesGui {
             .find(|p| p.name == name)
             .expect("This vec should always contains all Processes")
     }
+}
+
+/// Helper function to mitigate https://github.com/emilk/egui/issues/7434.
+///
+/// If this returns true, the app should early return in the `update()` function
+/// or call `wgpu::Device::poll()`
+fn mitigate_wgpu_mem_leak(ctx: &egui::Context) -> bool {
+    let mut is_minimized = false;
+    ctx.input(|reader| {
+        is_minimized = reader.viewport().minimized.unwrap_or_default();
+    });
+
+    is_minimized
 }

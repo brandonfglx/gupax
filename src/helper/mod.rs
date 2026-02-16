@@ -53,7 +53,6 @@ use port_check::is_port_reachable_with_timeout;
 use portable_pty::Child;
 use readable::up::Uptime;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::fmt::{Display, Write};
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::Path;
@@ -356,8 +355,16 @@ impl ProcessName {
             ProcessName::Xvb => "",
         }
     }
-    pub fn ports_listen_sys(&self) -> Option<HashSet<u16>> {
-        listeners::get_ports_by_process_name(self.binary_name()).ok()
+    pub fn ports_listen_sys(&self) -> Vec<u16> {
+        let mut ports = vec![];
+        if let Ok(set) = listeners::get_all() {
+            for listener in set.iter() {
+                if listener.process.name == self.binary_name() {
+                    ports.push(listener.socket.port());
+                }
+            }
+        }
+        ports
     }
     pub fn is_process_running(&self, sys: &mut System) -> bool {
         sys.refresh_processes_specifics(

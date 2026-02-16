@@ -603,15 +603,12 @@ pub fn spawn_local_outside_checker(tx: Arc<OnceLock<CheckLocalOutsideNode>>) {
 
 #[tokio::main]
 async fn check_local_node_outside(tx: Arc<OnceLock<CheckLocalOutsideNode>>) {
-    let local_outside_node_ports = ProcessName::Node.ports_listen_sys();
-    if let Some(set_ports) = local_outside_node_ports
-        && !set_ports.is_empty()
-    {
-        let ports = set_ports.iter().cloned().collect::<Vec<u16>>();
+    let ports = ProcessName::Node.ports_listen_sys();
+    if !ports.is_empty() {
         let timeout = Duration::from_millis(1500);
-        if let Some(zmq) = is_zmq_capable(SOCKET_MONERO_LOCAL_OUTSIDE, &ports, timeout).await {
+        if let Some(zmq) = is_zmq_capable(SOCKET_MONERO_LOCAL_OUTSIDE.ip(), &ports, timeout).await {
             if let Some(rpc) = is_rpc_capable(
-                SOCKET_MONERO_LOCAL_OUTSIDE,
+                SOCKET_MONERO_LOCAL_OUTSIDE.ip(),
                 18081,
                 &ports,
                 timeout,

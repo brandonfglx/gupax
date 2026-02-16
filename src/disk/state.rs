@@ -1,5 +1,5 @@
 use derive_more::Display;
-use rand::{Rng, distr::Alphanumeric, rng};
+use rand::{RngExt, distr::Alphanumeric, rng};
 use strum::{EnumCount, EnumIter, IntoEnumIterator};
 
 use super::*;

@@ -55,6 +55,41 @@ extern crate sudo as sudo_check;
 //---------------------------------------------------------------------------------------------------- Main [App] frame
 fn main() {
     let args = Cli::parse();
+    #[cfg(target_os = "windows")]
+    if args.elevated_helper {
+        use windows::Win32::System::Threading::BELOW_NORMAL_PRIORITY_CLASS;
+        let args_elevated_helper = elevated_helper::cli::Args {
+            name_pipe_stdin: args.name_stdin_pipe.unwrap(),
+            name_pipe_stdout: args.name_stdout_pipe.unwrap(),
+            program_path: args.binary_path.unwrap(),
+            program_args: args.arguments,
+            creation_flags: None,
+            priority: Some(BELOW_NORMAL_PRIORITY_CLASS.0),
+        };
+        if let Err(e) = elevated_helper::run(args_elevated_helper) {
+            eprintln!("Error: {}", e);
+            std::process::exit(1);
+        }
+        use sysinfo::System;
+        let mut sys = System::new();
+        let process = sys.processes_by_exact_name("xmrig.exe".as_ref()).next();
+
+        if let Some(process) = process {
+            let pid = process.pid();
+            loop {
+                use crate::utils::macros::sleep;
+
+                sleep!(5000);
+                sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[pid]), true);
+                // check if xmrig is still alive
+                if sys.process(pid).is_none() {
+                    break;
+                }
+            }
+        }
+        std::process::exit(0);
+    }
+
     let now = Instant::now();
 
     // Set custom panic hook.

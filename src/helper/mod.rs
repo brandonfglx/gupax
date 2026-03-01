@@ -50,12 +50,12 @@ use enclose::enc;
 use log::*;
 use node::{ImgNode, PubNodeApi};
 use port_check::is_port_reachable_with_timeout;
-use portable_pty::Child;
 use readable::up::Uptime;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Write};
 use std::net::{IpAddr, Ipv4Addr};
 use std::path::Path;
+use std::process::Child;
 use std::{
     path::PathBuf,
     sync::{Arc, Mutex},
@@ -243,7 +243,6 @@ pub enum ProcessState {
 pub enum ProcessSignal {
     #[default]
     None,
-    Start,
     Stop,
     Restart,
     UpdatePools(Pool),
@@ -722,7 +721,7 @@ impl Helper {
 
 // common functions inside watchdog thread
 fn check_died(
-    child_pty: &Arc<Mutex<Box<dyn Child + Sync + Send>>>,
+    child_pty: &Arc<Mutex<Child>>,
     process: &mut Process,
     start: &Instant,
     gui_api_output_raw: &mut String,
@@ -835,7 +834,7 @@ fn check_user_input(process: &Arc<Mutex<Process>>, stdin: &mut Box<dyn std::io::
 /// Won't work with xmrig as admin unless we resask for sudo but we don't manage an external xmrig miner, only possibly a local node.
 fn signal_end(
     process: &mut Process,
-    child_pty: Option<&Arc<Mutex<Box<dyn Child + Send + Sync + 'static>>>>,
+    child_pty: Option<&Arc<Mutex<Child>>>,
     start: &Instant,
     gui_api_output_raw: &mut String,
 ) -> bool {

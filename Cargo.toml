@@ -106,9 +106,9 @@ flate2 = "1.1"
 sudo = "0.6.0"
 # https://github.com/emilk/egui/releases/tag/0.30.0 see breaking change
 eframe = {version="0.33", features=["x11", "wayland"]}
-portable-pty = "0.9.0"
 # macOS
 [target.'cfg(target_os = "macos")'.dependencies]
+nix = { version = "0.31", features = ["fs"] }
 [dev-dependencies]
 egui = {version="0.33", features=["callstack"]}
 # egui = {git="https://github.com/emilk/egui", features=["callstack"]}
@@ -118,16 +118,12 @@ egui = {version="0.33", features=["callstack"]}
 
 # Windows dependencies
 [target.'cfg(windows)'.dependencies]
-# glow start on windows but not wgpu
-# need the same version that eframe is using with egui_wgpu
-# feature angle to enable support for old cpu on Windows
 wgpu = {version = "27.0.1", features=["angle"]}
 zip = "8.0.0"
+windows = "0.61.3"
 is_elevated = "0.1.2"
-## portable-pty upgrade on 0.9 will break terminals on windows 
-## it should always be at 0.8.1
-# portable-pty = "0.8.1"
-portable-pty = "0.8.1"
+elevated-helper = {git="https://github.com/Cyrix126/elevated-helper"}
+uuid = "1.21"
 
 # For Windows build (icon)
 [target.'cfg(windows)'.build-dependencies]

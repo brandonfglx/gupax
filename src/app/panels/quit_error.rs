@@ -354,13 +354,11 @@ impl crate::app::App {
                         }
                     }
                     Confirm => {
-                        
                         if ui
                             .add_sized([width, height / 2.0], Button::new("Continue"))
                             .clicked()
                         {
                             self.error_state.reset()
-                            
                         }
                         if key.is_esc()
                             || ui

@@ -1,27 +1,29 @@
-use egui::{ComboBox, Label, ProgressBar,  ScrollArea, TextStyle, Ui };
-use log::{ warn};
+use egui::{ComboBox, Label, ProgressBar, ScrollArea, TextStyle, Ui};
+use log::warn;
 
 use crate::{
-    app::App, 
+    app::App,
     components::update::BINARIES_NAME,
     miscs::height_txt_before_button,
-    utils::{constants::{ SPACE}, errors::{ErrorButtons, ErrorFerris}},
+    utils::{
+        constants::SPACE,
+        errors::{ErrorButtons, ErrorFerris},
+    },
 };
 
 impl App {
     pub fn show_settings_updates(&mut self, ui: &mut Ui) {
-                    #[cfg(feature = "distro")]
-                    {
-                        
-                ui.horizontal_wrapped(|ui|{
+        #[cfg(feature = "distro")]
+        {
+            ui.horizontal_wrapped(|ui|{
             ui.label(RichText::new("Gupax has been installed by your distribution package manager.\nYou should update it from it.")
                     .color(ORANGE));
                 });
-                return;
-                    }
+            return;
+        }
         ScrollArea::vertical().show(ui, |ui| {
-        self.update_all_widget(ui);
-        self.update_progress(ui);
+            self.update_all_widget(ui);
+            self.update_progress(ui);
             for name in BINARIES_NAME {
                 self.binary_update_settings_widget(ui, name);
             }
@@ -101,65 +103,85 @@ impl App {
         // });
     }
     fn update_progress(&mut self, ui: &mut Ui) {
-        ui.group(|ui|{
-            ui.vertical_centered(|ui|{
+        ui.group(|ui| {
+            ui.vertical_centered(|ui| {
                 let updating = self.update.lock().unwrap().updating;
-                    ui.add_enabled_ui(updating, |ui| {
-                        let prog = self.update.lock().unwrap().prog;
-                        let msg = format!(
-                            "{}\n{}{}",
-                            self.update.lock().unwrap().msg,
-                            prog,
-                            "%"
-                        );
-                        ui.label(msg);
-                        if updating {
-                            ui.spinner();
-                        } else {
-                            ui.label("...");
-                        }
-                        ui.add(ProgressBar::new(
-                            prog.round() / 100.0,
-                        ));
-                    });
+                ui.add_enabled_ui(updating, |ui| {
+                    let prog = self.update.lock().unwrap().prog;
+                    let msg = format!("{}\n{}{}", self.update.lock().unwrap().msg, prog, "%");
+                    ui.label(msg);
+                    if updating {
+                        ui.spinner();
+                    } else {
+                        ui.label("...");
+                    }
+                    ui.add(ProgressBar::new(prog.round() / 100.0));
+                });
             });
         });
     }
     fn warn_downgrade(&mut self, name: &str) -> bool {
-            // TODO: warn if selected version is a downgrade from current version
-                let selected_numeric_version: String = self.state.gupax.updates.selected_version_by_name(name).chars().take_while(|c|c.is_ascii_digit()).collect::<Vec<_>>().into_iter().collect();
-                let current_numeric_version: String = self.binaries_version.version_by_name(name).chars().take_while(|c|c.is_ascii_digit()).collect::<Vec<_>>().into_iter().collect();
-            if let Ok(selected) = selected_numeric_version.parse::<u32>() && let Ok(current) = current_numeric_version.parse::<u32>()
-                && selected < current {
-                     warn!("Trying to downgrade");
-                     let msg = if name != "gupax" {"You are trying to downgrade a binary. This is potentially dangerous as it is unsupported."} else {
-                         "You are trying to downgrade Gupax. This is really dangerous as you could loose the ability to upgrade it and be stuck on the old version. You would need to re-install it manually. You also could loose your saved configuration"
-                     };
-                     
-                     self.error_state.set(msg,ErrorFerris::Panic,ErrorButtons::Confirm);
-                     if self.error_state.msg == "Canceled" {
-                         self.error_state.msg = "".to_string();
-                         return false;
-                     }
+        // TODO: warn if selected version is a downgrade from current version
+        let selected_numeric_version: String = self
+            .state
+            .gupax
+            .updates
+            .selected_version_by_name(name)
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect();
+        let current_numeric_version: String = self
+            .binaries_version
+            .version_by_name(name)
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect::<Vec<_>>()
+            .into_iter()
+            .collect();
+        if let Ok(selected) = selected_numeric_version.parse::<u32>()
+            && let Ok(current) = current_numeric_version.parse::<u32>()
+            && selected < current
+        {
+            warn!("Trying to downgrade");
+            let msg = if name != "gupax" {
+                "You are trying to downgrade a binary. This is potentially dangerous as it is unsupported."
+            } else {
+                "You are trying to downgrade Gupax. This is really dangerous as you could loose the ability to upgrade it and be stuck on the old version. You would need to re-install it manually. You also could loose your saved configuration"
+            };
+
+            self.error_state
+                .set(msg, ErrorFerris::Panic, ErrorButtons::Confirm);
+            if self.error_state.msg == "Canceled" {
+                self.error_state.msg = "".to_string();
+                return false;
             }
+        }
         true
     }
     fn warn_switch_beta(&mut self, name: &str) -> bool {
-        if !self.binaries_version.version_by_name(name).contains("BETA") && self.state.gupax.updates.selected_version_by_name(name).contains("BETA") {
-                     warn!("Trying to downgrade");
-                     let msg = "You are trying to update to a BETA. Do this only if you want to help test unstable software."; 
-                     self.error_state.set(msg,ErrorFerris::Panic,ErrorButtons::Confirm);
-                     if self.error_state.msg == "Canceled" {
-                         self.error_state.msg = "".to_string();
-                         return false;
-                     }
-            
+        if !self.binaries_version.version_by_name(name).contains("BETA")
+            && self
+                .state
+                .gupax
+                .updates
+                .selected_version_by_name(name)
+                .contains("BETA")
+        {
+            warn!("Trying to downgrade");
+            let msg = "You are trying to update to a BETA. Do this only if you want to help test unstable software.";
+            self.error_state
+                .set(msg, ErrorFerris::Panic, ErrorButtons::Confirm);
+            if self.error_state.msg == "Canceled" {
+                self.error_state.msg = "".to_string();
+                return false;
+            }
         }
         true
-        
     }
     fn update_all_widget(&mut self, ui: &mut Ui) {
-                ui.add_space(SPACE);
+        ui.add_space(SPACE);
         ui.horizontal(|ui|{
             ui.vertical(|ui|{
                 ui.add_space(SPACE / 2.0);
@@ -173,10 +195,8 @@ impl App {
             self.update
                 .update_all(self.state.gupax.clone(), self.binaries_version.clone());
         }
-                
             });
         ui.checkbox(&mut self.state.gupax.updates.beta, "Beta").on_hover_text("Participate in pre-release. Check only if you want to test release to come before they are stabilized. You will experience bugs.");
-            
         });
     }
     fn binary_update_settings_widget(&mut self, ui: &mut Ui, name: &str) {
@@ -207,25 +227,37 @@ impl App {
         }
     }
     fn update_binary_button(&mut self, ui: &mut Ui, name: &str) {
-        
-
-        let enable = !self.update.lock().unwrap().releases_by_name(name).is_empty();
-        ui.add_enabled_ui(enable, |ui|{
-            if ui.button("Update")
-            .on_hover_text("Update to the selected version")
-            .clicked()
-            && self.warn_downgrade(name) && self.warn_switch_beta(name) {
-            self.update.update_version(
-                vec![name.to_string()],
-                self.state.gupax.clone(),
-                self.binaries_version.clone(),
-            );
+        let enable = !self
+            .update
+            .lock()
+            .unwrap()
+            .releases_by_name(name)
+            .is_empty();
+        ui.add_enabled_ui(enable, |ui| {
+            if ui
+                .button("Update")
+                .on_hover_text("Update to the selected version")
+                .clicked()
+                && self.warn_downgrade(name)
+                && self.warn_switch_beta(name)
+            {
+                self.update.update_version(
+                    vec![name.to_string()],
+                    self.state.gupax.clone(),
+                    self.binaries_version.clone(),
+                );
             }
         });
     }
     fn list_versions(&mut self, ui: &mut Ui, name: &str) {
         let selected_version = self.state.gupax.updates.selected_version_by_name_mut(name);
-        if !self.update.lock().unwrap().releases_by_name(name).is_empty() {
+        if !self
+            .update
+            .lock()
+            .unwrap()
+            .releases_by_name(name)
+            .is_empty()
+        {
             ComboBox::new(format!("combo_version_{name}"), "")
                 .selected_text(selected_version.to_string())
                 .wrap_mode(egui::TextWrapMode::Extend)

@@ -2,9 +2,9 @@ use egui::{Image, Label, ScrollArea, TextStyle, Ui, Vec2};
 use log::debug;
 
 use crate::{
-    BYTES_BANNER, COMMIT, GUPAX_VERSION, KEYBOARD_SHORTCUTS, OS_NAME, P2POOL_VERSION, SPACE,
-    XMRIG_PROXY_VERSION, XMRIG_VERSION,
+    BYTES_BANNER, COMMIT, GUPAX_VERSION, KEYBOARD_SHORTCUTS, OS_NAME, SPACE,
     app::keys::KeyPressed,
+    components::update::Update,
     errors::{ErrorButtons, ErrorFerris},
 };
 
@@ -69,9 +69,9 @@ path_xmr: {:#?}\n
 ------------------------------------------ ORIGINAL STATE ------------------------------------------
 {:#?}",
 							GUPAX_VERSION,
-							P2POOL_VERSION,
-							XMRIG_VERSION,
-							XMRIG_PROXY_VERSION,
+							Update::get_version_binary(&self.state.gupax.absolute_p2pool_path).unwrap_or(String::from("No P2Pool binary found")),
+							Update::get_version_binary(&self.state.gupax.absolute_xmrig_path).unwrap_or(String::from("No XMRig binary found")),
+							Update::get_version_binary(&self.state.gupax.absolute_xp_path).unwrap_or(String::from("No Xmrig-Proxy binary found")),
 							self.now.elapsed().as_secs_f32(),
 							self.state.gupax.selected_width,
 							self.state.gupax.selected_height,

@@ -1,6 +1,4 @@
 use crate::app::App;
-#[cfg(not(feature = "distro"))]
-use crate::components::update::Update;
 use crate::components::update::check_binary_path;
 use crate::helper::crawler::Crawler;
 use crate::helper::{Helper, ProcessName};
@@ -138,19 +136,19 @@ pub fn init_auto(app: &mut App) {
         .expect("could not get the current path");
 
     // [Auto-Update]
-    #[cfg(not(feature = "distro"))]
-    if app.state.gupax.auto.is_enabled(&AutoStart::Update) {
-        Update::spawn_thread(
-            &app.og,
-            &app.state.gupax,
-            &app.state_path,
-            &app.update,
-            &mut app.error_state,
-            &app.restart,
-        );
-    } else {
-        info!("Skipping auto-update...");
-    }
+    // #[cfg(not(feature = "distro"))]
+    // if app.state.gupax.auto.is_enabled(&AutoStart::Update) {
+    //     Update::spawn_thread(
+    //         &app.og,
+    //         &app.state.gupax,
+    //         &app.state_path,
+    //         &app.update,
+    //         &mut app.error_state,
+    //         &app.restart,
+    //     );
+    // } else {
+    //     info!("Skipping auto-update...");
+    // }
 
     // [Auto-Crawl]
     // If the crawling is used, we do not use custom backup nodes

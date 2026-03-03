@@ -16,9 +16,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 //---------------------------------------------------------------------------------------------------- Use
-use crate::constants::{
-    COMMIT, GUPAX_VERSION, NODE_VERSION, OS_NAME, P2POOL_VERSION, XMRIG_VERSION,
-};
+use crate::constants::{COMMIT, GUPAX_VERSION, OS_NAME};
 
 //----------------------------------------------------------------------------------------------------
 #[cold]
@@ -41,15 +39,10 @@ info:
    args        | {args:?}
    commit      | {COMMIT}
    gupax      | {GUPAX_VERSION}
-   monerod     | {NODE_VERSION} (bundled) 
-   p2pool      | {P2POOL_VERSION} (bundled)
-   xmrig       | {XMRIG_VERSION} (bundled)
-   xmrig-proxy | {XMRIG_VERSION} (bundled)
    uptime      | {uptime} seconds
 
 stack backtrace:\n{stack_trace}",
         );
-
         // Attempt to write panic info to disk.
         match crate::disk::get_gupax_data_path() {
             Ok(mut path) => {

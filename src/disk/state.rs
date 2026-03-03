@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use derive_more::Display;
 use rand::{RngExt, distr::Alphanumeric, rng};
 use strum::{EnumCount, EnumIter, IntoEnumIterator};
@@ -6,7 +8,7 @@ use super::*;
 use crate::{
     app::{
         BackupNodes,
-        submenu_enum::{SubmenuP2pool, SubmenuStatus},
+        submenu_enum::{SubmenuGupax, SubmenuP2pool, SubmenuStatus},
     },
     components::node::RemoteNode,
     disk::status::*,
@@ -216,7 +218,7 @@ pub struct Status {
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Gupax {
-    pub simple: bool,
+    pub submenu: SubmenuGupax,
     pub auto: AutoEnabled,
     pub p2pool_path: String,
     pub node_path: String,
@@ -235,6 +237,101 @@ pub struct Gupax {
     pub notifications: Vec<Notification>,
     pub theme: GupaxTheme,
     pub renderer_use_glow: bool,
+    pub updates: UpdateSettings,
+}
+
+impl Gupax {
+    pub fn path_by_name(&self, name: &str) -> &Path {
+        match name {
+            "p2pool" => &self.absolute_p2pool_path,
+            "xmrig" => &self.absolute_xmrig_path,
+            "xmrig-proxy" => &self.absolute_xp_path,
+            "monerod" => &self.absolute_node_path,
+            _ => panic!("unrecognized name"),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
+pub struct UpdateSettings {
+    pub gupax_version: String,
+    pub gupax_source: String,
+    pub node_version: String,
+    pub node_source: String,
+    pub p2pool_version: String,
+    pub p2pool_source: String,
+    pub xmrig_version: String,
+    pub xmrig_source: String,
+    pub proxy_version: String,
+    pub proxy_source: String,
+    pub check_version_frequency: Duration,
+    pub automatic_update: bool,
+    pub automatic_restart: bool,
+    pub beta: bool,
+}
+
+impl UpdateSettings {
+    pub fn selected_version_by_name(&self, name: &str) -> &str {
+        match name {
+            "gupax" => &self.gupax_version,
+            "p2pool" => &self.p2pool_version,
+            "xmrig" => &self.xmrig_version,
+            "xmrig-proxy" => &self.proxy_version,
+            "monerod" => &self.node_version,
+            _ => panic!("unrecognized name"),
+        }
+    }
+    pub fn selected_version_by_name_mut(&mut self, name: &str) -> &mut String {
+        match name {
+            "gupax" => &mut self.gupax_version,
+            "p2pool" => &mut self.p2pool_version,
+            "xmrig" => &mut self.xmrig_version,
+            "xmrig-proxy" => &mut self.proxy_version,
+            "monerod" => &mut self.node_version,
+            _ => panic!("unrecognized name"),
+        }
+    }
+    pub fn source_by_name(&self, name: &str) -> &str {
+        match name {
+            "gupax" => &self.gupax_source,
+            "p2pool" => &self.p2pool_source,
+            "xmrig" => &self.xmrig_source,
+            "xmrig-proxy" => &self.proxy_source,
+            "monerod" => &self.node_source,
+            _ => panic!("unrecognized name"),
+        }
+    }
+    pub fn source_by_name_mut(&mut self, name: &str) -> &mut String {
+        match name {
+            "gupax" => &mut self.gupax_source,
+            "p2pool" => &mut self.p2pool_source,
+            "xmrig" => &mut self.xmrig_source,
+            "xmrig-proxy" => &mut self.proxy_source,
+            "monerod" => &mut self.node_source,
+            _ => panic!("unrecognized name"),
+        }
+    }
+}
+
+impl Default for UpdateSettings {
+    fn default() -> Self {
+        Self {
+            gupax_version: "latest".to_owned(),
+            gupax_source: "https://api.github.com/repos/gupax-io/gupax/releases".to_owned(),
+            node_version: "v0.18.4.5".to_owned(),
+            node_source: "https://api.github.com/repos/monero-project/monero/releases".to_owned(),
+            p2pool_version: "v4.14".to_owned(),
+            p2pool_source: "https://api.github.com/repos/SChernykh/p2pool/releases".to_owned(),
+            xmrig_version: "v6.25.0".to_owned(),
+            xmrig_source: "https://api.github.com/repos/xmrig/xmrig/releases".to_owned(),
+            proxy_version: "v6.24.0".to_owned(),
+            proxy_source: "https://api.github.com/repos/xmrig/xmrig-proxy/releases".to_owned(),
+            check_version_frequency: Duration::from_hours(12),
+            automatic_update: false,
+            automatic_restart: false,
+            beta: false,
+        }
+    }
 }
 
 #[derive(Default, Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -262,7 +359,7 @@ impl GupaxTheme {
 }
 
 #[derive(
-    Clone, PartialEq, Debug, Deserialize, Serialize, EnumIter, PartialOrd, Display, Ord, Eq, Copy,
+    Clone, PartialEq, Debug, Deserialize, Serialize, EnumIter, PartialOrd, Display, Ord, Eq,
 )]
 pub enum Notification {
     // A new payout occurred
@@ -300,7 +397,6 @@ impl Notification {
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct AutoEnabled {
     pub update: bool,
-    pub bundled: bool,
     pub crawl: bool,
     pub ask_before_quit: bool,
     pub save_before_quit: bool,
@@ -310,7 +406,6 @@ impl AutoEnabled {
     pub fn enable(&mut self, auto: &AutoStart, enable: bool) {
         match auto {
             AutoStart::Update => self.update = enable,
-            AutoStart::Bundle => self.bundled = enable,
             AutoStart::Crawl => self.crawl = enable,
             AutoStart::AskBeforeQuit => self.ask_before_quit = enable,
             AutoStart::SaveBeforequit => self.save_before_quit = enable,
@@ -329,7 +424,6 @@ impl AutoEnabled {
     pub fn is_enabled(&self, auto: &AutoStart) -> bool {
         match auto {
             AutoStart::Update => self.update,
-            AutoStart::Bundle => self.bundled,
             AutoStart::Crawl => self.crawl,
             AutoStart::AskBeforeQuit => self.ask_before_quit,
             AutoStart::SaveBeforequit => self.save_before_quit,
@@ -341,7 +435,6 @@ impl AutoEnabled {
 pub enum AutoStart {
     #[strum(to_string = "Auto-Update")]
     Update,
-    Bundle,
     #[strum(to_string = "Crawler")]
     Crawl,
     #[strum(to_string = "Confirm quit")]
@@ -355,7 +448,6 @@ impl AutoStart {
     pub const fn help_msg(&self) -> &str {
         match self {
             AutoStart::Update => GUPAX_AUTO_UPDATE,
-            AutoStart::Bundle => GUPAX_BUNDLED_UPDATE,
             AutoStart::Crawl => GUPAX_AUTO_CRAWL,
             AutoStart::AskBeforeQuit => GUPAX_ASK_BEFORE_QUIT,
             AutoStart::SaveBeforequit => GUPAX_SAVE_BEFORE_QUIT,
@@ -366,7 +458,6 @@ impl AutoStart {
     // Would necessities unstable feature https://github.com/rust-lang/rust/issues/87575
     pub const ALL: &[AutoStart] = &[
         AutoStart::Update,
-        AutoStart::Bundle,
         AutoStart::Crawl,
         AutoStart::Process(ProcessName::Node),
         AutoStart::Process(ProcessName::P2pool),
@@ -595,8 +686,6 @@ pub struct Xvb {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Version {
     pub gupax: String,
-    pub p2pool: String,
-    pub xmrig: String,
 }
 
 //---------------------------------------------------------------------------------------------------- [State] Defaults
@@ -604,10 +693,6 @@ impl Default for AutoEnabled {
     fn default() -> Self {
         Self {
             update: false,
-            #[cfg(feature = "bundle")]
-            bundled: true,
-            #[cfg(not(feature = "bundle"))]
-            bundled: false,
             crawl: true,
             ask_before_quit: true,
             save_before_quit: true,
@@ -631,7 +716,7 @@ impl Default for Status {
 impl Default for Gupax {
     fn default() -> Self {
         Self {
-            simple: true,
+            submenu: SubmenuGupax::Simple,
             auto: AutoEnabled::default(),
             p2pool_path: DEFAULT_P2POOL_PATH.to_string(),
             xmrig_path: DEFAULT_XMRIG_PATH.to_string(),
@@ -651,6 +736,7 @@ impl Default for Gupax {
             notifications: Notification::iter().collect(),
             theme: GupaxTheme::default(),
             renderer_use_glow: false,
+            updates: UpdateSettings::default(),
         }
     }
 }
@@ -776,8 +862,6 @@ impl Default for Version {
     fn default() -> Self {
         Self {
             gupax: GUPAX_VERSION.to_string(),
-            p2pool: P2POOL_VERSION.to_string(),
-            xmrig: XMRIG_VERSION.to_string(),
         }
     }
 }

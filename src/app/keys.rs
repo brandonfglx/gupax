@@ -19,7 +19,7 @@ use egui::{Key, Modifiers};
 use log::info;
 
 use crate::{
-    app::submenu_enum::{SubmenuP2pool, SubmenuStatus},
+    app::submenu_enum::{SubmenuGupax, SubmenuP2pool, SubmenuStatus},
     utils::macros::flip,
 };
 
@@ -176,7 +176,11 @@ impl App {
                     SubmenuStatus::P2pool => self.state.status.submenu = SubmenuStatus::Processes,
                     SubmenuStatus::Benchmarks => self.state.status.submenu = SubmenuStatus::P2pool,
                 },
-                Tab::Gupax => flip!(self.state.gupax.simple),
+                Tab::Settings => match self.state.gupax.submenu {
+                    SubmenuGupax::Simple => self.state.gupax.submenu = SubmenuGupax::Updates,
+                    SubmenuGupax::Advanced => self.state.gupax.submenu = SubmenuGupax::Simple,
+                    SubmenuGupax::Updates => self.state.gupax.submenu = SubmenuGupax::Advanced,
+                },
                 Tab::Node => flip!(self.state.node.simple),
                 Tab::P2pool => match self.state.p2pool.submenu {
                     SubmenuP2pool::Simple => self.state.p2pool.submenu = SubmenuP2pool::Crawler,
@@ -198,7 +202,11 @@ impl App {
                         self.state.status.submenu = SubmenuStatus::Processes
                     }
                 },
-                Tab::Gupax => flip!(self.state.gupax.simple),
+                Tab::Settings => match self.state.gupax.submenu {
+                    SubmenuGupax::Simple => self.state.gupax.submenu = SubmenuGupax::Advanced,
+                    SubmenuGupax::Advanced => self.state.gupax.submenu = SubmenuGupax::Updates,
+                    SubmenuGupax::Updates => self.state.gupax.submenu = SubmenuGupax::Simple,
+                },
                 Tab::P2pool => match self.state.p2pool.submenu {
                     SubmenuP2pool::Simple => self.state.p2pool.submenu = SubmenuP2pool::Advanced,
                     SubmenuP2pool::Advanced => self.state.p2pool.submenu = SubmenuP2pool::Crawler,

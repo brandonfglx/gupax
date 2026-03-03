@@ -24,29 +24,26 @@
 //     b. auto-update at startup
 
 //---------------------------------------------------------------------------------------------------- Imports
+#[cfg(target_family = "windows")]
+use crate::miscs::get_exe_dir;
 use crate::{
-    app::Restart,
-    constants::GUPAX_VERSION,
-    disk::{state::State, *},
-    helper::ProcessName,
-    macros::*,
-    miscs::get_exe_dir,
-    utils::errors::{ErrorButtons, ErrorFerris, ErrorState},
+    app::BinariesVersion,
+    disk::state::Gupax,
+    helper::{ProcessName, notification::notif},
 };
-use anyhow::{Error, anyhow};
+use bytes::Bytes;
+use derive_more::Deref;
+#[cfg(target_family = "unix")]
+use flate2::bufread::GzDecoder;
 use log::*;
-use rand::{RngExt, distr::Alphanumeric, rng};
-use reqwest::header::{LOCATION, USER_AGENT};
-use reqwest::{Client, RequestBuilder};
+use regex::Regex;
+use reqwest::{Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
-use walkdir::WalkDir;
-
-#[cfg(target_os = "windows")]
-use zip::ZipArchive;
-//#[cfg(target_family = "unix")]
-//use std::os::unix::fs::OpenOptionsExt;
+use std::{fmt::Display, path::Path, thread};
+use std::{
+    process::Command,
+    sync::{Arc, Mutex},
+};
 
 //---------------------------------------------------------------------------------------------------- Constants
 // Package naming schemes:
@@ -55,11 +52,8 @@ use zip::ZipArchive;
 // Example: https://github.com/hinto-janai/gupax/releases/download/v0.0.1/gupax-v0.0.1-linux-standalone-x64.tar.gz
 //
 
-const GUPAX_METADATA: &str = "https://api.github.com/repos/gupax-io/gupax/releases/latest";
-
 cfg_if::cfg_if! {
      if #[cfg(target_family = "unix")] {
-    pub const GUPAX_BINARY: &str = "gupax";
     pub const P2POOL_BINARY: &str = "p2pool";
     pub const NODE_BINARY: &str = "monerod";
     pub const XMRIG_BINARY: &str = "xmrig";
@@ -70,7 +64,6 @@ cfg_if::cfg_if! {
      if #[cfg(target_os = "windows")] {
     pub(super) const OS_TARGET: &str = "windows";
     pub(super) const ARCHIVE_EXT: &str = "zip";
-    pub const GUPAX_BINARY: &str = "Gupax.exe";
     pub const P2POOL_BINARY: &str = "p2pool.exe";
     pub const NODE_BINARY: &str = "monerod.exe";
     pub const XMRIG_BINARY: &str = "xmrig.exe";
@@ -88,54 +81,9 @@ cfg_if::cfg_if! {
 pub(super) const ARCH_TARGET: &str = "x64";
 #[cfg(target_arch = "aarch64")]
 pub(super) const ARCH_TARGET: &str = "arm64";
-
-// Some fake Curl/Wget user-agents because GitHub API requires one// user-agent might be fingerprintable without all the associated headers.
-const FAKE_USER_AGENT: [&str; 25] = [
-    "Wget/1.16.3",
-    "Wget/1.17",
-    "Wget/1.17.1",
-    "Wget/1.18",
-    "Wget/1.18",
-    "Wget/1.19",
-    "Wget/1.19.1",
-    "Wget/1.19.2",
-    "Wget/1.19.3",
-    "Wget/1.19.4",
-    "Wget/1.19.5",
-    "Wget/1.20",
-    "Wget/1.20.1",
-    "Wget/1.20.2",
-    "Wget/1.20.3",
-    "Wget/1.21",
-    "Wget/1.21.1",
-    "Wget/1.21.2",
-    "Wget/1.21.3",
-    "Wget/1.21.4",
-    "curl/7.65.3",
-    "curl/7.66.0",
-    "curl/7.67.0",
-    "curl/7.68.0",
-    "curl/8.4.0",
-];
-
+// https://docs.github.com/en/rest/using-the-rest-api/getting-started-with-the-rest-api?apiVersion=2022-11-28#user-agent
+const APP_USER_AGENT: &str = "GUPAX";
 const MSG_NONE: &str = "No update in progress";
-const MSG_START: &str = "Starting update";
-const MSG_TMP: &str = "Creating temporary directory";
-const MSG_HTTPS: &str = "Creating HTTPS client";
-const MSG_METADATA: &str = "Fetching package metadata";
-const MSG_COMPARE: &str = "Compare package versions";
-const MSG_UP_TO_DATE: &str = "All packages already up-to-date";
-const MSG_DOWNLOAD: &str = "Downloading packages";
-const MSG_EXTRACT: &str = "Extracting packages";
-const MSG_UPGRADE: &str = "Upgrading packages";
-pub const MSG_FAILED: &str = "Update failed";
-pub const MSG_FAILED_HELP: &str = "Consider manually replacing your executable from github releases: https://github.com/gupax-io/gupax/releases";
-const INIT: &str = "------------------- Init -------------------";
-const METADATA: &str = "----------------- Metadata -----------------";
-const COMPARE: &str = "----------------- Compare ------------------";
-const DOWNLOAD: &str = "----------------- Download -----------------";
-const EXTRACT: &str = "----------------- Extract ------------------";
-const UPGRADE: &str = "----------------- Upgrade ------------------";
 
 //---------------------------------------------------------------------------------------------------- General functions
 pub fn check_binary_path(path: &str, process: ProcessName) -> bool {
@@ -153,525 +101,449 @@ pub fn check_binary_path(path: &str, process: ProcessName) -> bool {
     filename == process.binary_name()
 }
 
-//---------------------------------------------------------------------------------------------------- Update struct/impl
-// Contains values needed during update
-// Progress bar structure:
-// 0%  | Start
-// 5%  | Create tmp directory, pkg list, fake user-agent
-// 5%  | Create HTTPS client
-// 30% | Download Metadata (x3)
-// 5%  | Compare Versions (x3)
-// 30% | Download Archive (x3)
-// 5%  | Extract (x3)
-// 5%  | Upgrade (x3)
-
-#[derive(Clone)]
+#[derive(Clone, Deref)]
 pub struct Update {
-    pub path_gupax: String,         // Full path to current gupax
-    pub path_p2pool: String,        // Full path to current p2pool
-    pub path_xmrig: String,         // Full path to current xmrig
-    pub path_xp: String,            // Full path to current xmrig-proxy
-    pub path_node: String,          // Full path to current node
-    pub updating: Arc<Mutex<bool>>, // Is an update in progress?
-    pub prog: Arc<Mutex<f32>>,      // Holds the 0-100% progress bar number
-    pub msg: Arc<Mutex<String>>,    // Message to display on [Gupax] tab while updating
+    inner: Arc<Mutex<InnerUpdate>>,
 }
 
+#[derive(Clone)]
+pub struct InnerUpdate {
+    pub updating: bool, // Is an update in progress?
+    pub prog: f32,      // Holds the 0-100% progress bar number
+    pub msg: String,    // Message to display on [Gupax] tab while updating
+    pub gupax_versions: Vec<Release>,
+    pub p2pool_versions: Vec<Release>,
+    pub xmrig_versions: Vec<Release>,
+    pub xp_versions: Vec<Release>,
+    pub node_versions: Vec<Release>,
+    pub client: Client,
+}
+
+pub const BINARIES_NAME: [&str; 5] = ["gupax", "monerod", "p2pool", "xmrig", "xmrig-proxy"];
 impl Update {
     // Takes in current paths from [State]
-    pub fn new(
-        path_gupax: String,
-        path_p2pool: PathBuf,
-        path_xmrig: PathBuf,
-        path_xp: PathBuf,
-        path_node: PathBuf,
-    ) -> Self {
+    pub fn new() -> Self {
         Self {
-            path_gupax,
-            path_p2pool: path_p2pool.display().to_string(),
-            path_xmrig: path_xmrig.display().to_string(),
-            path_xp: path_xp.display().to_string(),
-            path_node: path_node.display().to_string(),
-            updating: arc_mut!(false),
-            prog: arc_mut!(0.0),
-            msg: arc_mut!(MSG_NONE.to_string()),
+            inner: Arc::new(Mutex::new(InnerUpdate {
+                updating: false,
+                prog: 0.0,
+                msg: MSG_NONE.to_string(),
+                gupax_versions: vec![],
+                p2pool_versions: vec![],
+                xmrig_versions: vec![],
+                xp_versions: vec![],
+                node_versions: vec![],
+                client: ClientBuilder::new()
+                    .user_agent(APP_USER_AGENT)
+                    .build()
+                    .unwrap(),
+            })),
         }
+    }
+
+    fn update_version_with_latest_version(version: &mut String, releases: &[Release], beta: bool) {
+        if let Some(latest) = releases
+            .iter()
+            .find(|r| if beta { r.prerelease } else { !r.prerelease })
+        {
+            *version = latest.to_string();
+        }
+    }
+    pub fn update_all(&self, mut gupax_settings: Gupax, binaries_version: BinariesVersion) {
+        let update = self.clone();
+        thread::spawn(move || {
+            update.lock().unwrap().updating = true;
+            let binaries = BINARIES_NAME.into_iter().map(|s| s.to_string()).collect();
+            if let Err(e) = update.spawn_refresh_versions(&binaries, &gupax_settings) {
+                notif(&e.to_string());
+                update.lock().unwrap().msg = format!("Refresh of metadata failed: {e}");
+                update.lock().unwrap().updating = false;
+                return;
+            }
+            // update to latest version
+            Self::update_version_with_latest_version(
+                &mut gupax_settings.updates.gupax_version,
+                &update.lock().unwrap().gupax_versions,
+                gupax_settings.updates.beta,
+            );
+            Self::update_version_with_latest_version(
+                &mut gupax_settings.updates.node_version,
+                &update.lock().unwrap().node_versions,
+                gupax_settings.updates.beta,
+            );
+            Self::update_version_with_latest_version(
+                &mut gupax_settings.updates.p2pool_version,
+                &update.lock().unwrap().p2pool_versions,
+                gupax_settings.updates.beta,
+            );
+            Self::update_version_with_latest_version(
+                &mut gupax_settings.updates.xmrig_version,
+                &update.lock().unwrap().xmrig_versions,
+                gupax_settings.updates.beta,
+            );
+            Self::update_version_with_latest_version(
+                &mut gupax_settings.updates.proxy_version,
+                &update.lock().unwrap().xp_versions,
+                gupax_settings.updates.beta,
+            );
+            if update.is_update_available(&binaries_version) {
+                match update.spawn_update_versions(&binaries, &gupax_settings, &binaries_version) {
+                    Ok(_) => notif(
+                        "Binaries have been updated, you need to restart Gupax to apply the change",
+                    ),
+                    Err(e) => {
+                        update.lock().unwrap().msg = format!("Update failed: {e}");
+                        notif(&e.to_string())
+                    }
+                }
+            }
+            update.lock().unwrap().updating = false;
+        });
+    }
+    pub fn is_update_available(&self, binaries_version: &BinariesVersion) -> bool {
+        let update = self.lock().unwrap();
+        for name in BINARIES_NAME {
+            let available = match name {
+                "gupax" => !update
+                    .gupax_versions
+                    .iter()
+                    .any(|r| r.tag_name == binaries_version.gupax_version),
+                "p2pool" => !update
+                    .p2pool_versions
+                    .iter()
+                    .any(|r| r.tag_name == binaries_version.p2pool_version),
+                "xmrig" => !update
+                    .xmrig_versions
+                    .iter()
+                    .any(|r| r.tag_name == binaries_version.xmrig_version),
+                "xmrig-proxy" => !update
+                    .xp_versions
+                    .iter()
+                    .any(|r| r.tag_name == binaries_version.proxy_version),
+                "monerod" => !update
+                    .node_versions
+                    .iter()
+                    .any(|r| r.tag_name == binaries_version.node_version),
+                _ => panic!("unknown name"),
+            };
+            if available {
+                return true;
+            }
+        }
+        false
+    }
+    pub fn refresh_versions(&self, binaries: Vec<String>, gupax_settings: Gupax) {
+        let update = self.clone();
+        thread::spawn(move || {
+            if let Err(e) = update.spawn_refresh_versions(&binaries, &gupax_settings) {
+                notif(&e.to_string());
+            }
+        });
+    }
+
+    /// TODO, msg in case of failure
+    #[tokio::main]
+    async fn spawn_refresh_versions(
+        &self,
+        binaries: &Vec<String>,
+        gupax_settings: &Gupax,
+    ) -> Result<(), reqwest::Error> {
+        let client = self.lock().unwrap().client.clone();
+        for name in binaries {
+            let source = match name.as_str() {
+                "gupax" => &gupax_settings.updates.gupax_source,
+                "p2pool" => &gupax_settings.updates.p2pool_source,
+                "xmrig" => &gupax_settings.updates.xmrig_source,
+                "xmrig-proxy" => &gupax_settings.updates.proxy_source,
+                "monerod" => &gupax_settings.updates.node_source,
+                _ => panic!("unknown name"),
+            };
+
+            let mut url = format!("https://{source}");
+            if source.contains("github.com") {
+                url = url.replace("github.com", "api.github.com/repos");
+                url.push_str("/releases");
+            }
+            dbg!(&url);
+            let updated_versions = client.get(url).send().await?.json::<Vec<Release>>().await?;
+            dbg!(&updated_versions);
+
+            let mut update = self.lock().unwrap();
+            let versions = update.releases_by_name(name);
+            if let Some(v) = updated_versions.first()
+                && (versions
+                    .first()
+                    .is_some_and(|first| v.tag_name != first.tag_name)
+                    || versions.is_empty())
+            {
+                // there is a new version, send a notification
+                notif(&v.body);
+                *versions = updated_versions;
+            }
+        }
+        Ok(())
+    }
+    // service should be stopped by UI when clicking the button update
+    pub fn update_version(
+        &mut self,
+        binaries: Vec<String>,
+        gupax_settings: Gupax,
+        binaries_version: BinariesVersion,
+    ) {
+        let update = self.clone();
+        thread::spawn(move || {
+            update.lock().unwrap().updating = true;
+            match update.spawn_update_versions(&binaries, &gupax_settings, &binaries_version) {
+                Ok(_) => notif(
+                    "A binary has been updated, you need to restart Gupax to apply the change",
+                ),
+                Err(e) => {
+                    update.lock().unwrap().msg = format!("Update failed: {e}");
+                    notif(&e.to_string())
+                }
+            }
+            update.lock().unwrap().updating = false;
+        });
+    }
+
+    #[tokio::main]
+    async fn spawn_update_versions(
+        &self,
+        binaries: &Vec<String>,
+        gupax_settings: &Gupax,
+        binaries_version: &BinariesVersion,
+    ) -> Result<(), reqwest::Error> {
+        let client = self.lock().unwrap().client.clone();
+        let part_progress = 100.0 / binaries.len() as f32;
+        self.lock().unwrap().prog = 0.0;
+        for name in binaries {
+            let source = gupax_settings.updates.source_by_name(name);
+            let selected_version = gupax_settings.updates.selected_version_by_name(name);
+            let current_version = binaries_version.version_by_name(name);
+            let binary_path = if name == "gupax" {
+                &std::env::current_exe().unwrap()
+            } else {
+                gupax_settings.path_by_name(name)
+            };
+            if selected_version == current_version {
+                // binary is already at the selected version
+                self.lock().unwrap().prog += part_progress;
+                self.lock().unwrap().msg =
+                    format!("The current version of {name} is already up to date");
+                continue;
+            }
+
+            // download selected_version
+            self.lock().unwrap().msg = format!("Downloading of the new release of {name}");
+            let (bytes, extension) =
+                Self::get_binary(&client, name, selected_version, source).await?;
+            self.lock().unwrap().prog += part_progress / 2.0;
+            self.lock().unwrap().msg = format!("Extracting {name} binary");
+            // On windows, move current binary if it does exist
+            #[cfg(target_os = "windows")]
+            {
+                if binary_path.exists() {
+                    let tmp_dir = Self::get_tmp_dir().unwrap();
+                    let tmp_windows = tmp_dir + &format!("{name}.exe");
+                    std::fs::rename(binary_path, tmp_windows).unwrap();
+                }
+            }
+            dbg!(&extension);
+            match extension.as_str() {
+                #[cfg(target_family = "unix")]
+                "bz2" => {
+                    let mut archive =
+                        tar::Archive::new(bzip2_rs::DecoderReader::new(bytes.as_ref()));
+                    archive
+                        .entries()
+                        .unwrap()
+                        .into_iter()
+                        .find(|entry| {
+                            let path = entry.as_ref().unwrap().path().unwrap();
+                            if let Some(filename) = path.file_name()
+                                && filename == name.as_str()
+                            {
+                                return true;
+                            }
+                            false
+                        })
+                        .unwrap()
+                        .unwrap()
+                        .unpack(binary_path)
+                        .unwrap();
+                }
+                #[cfg(target_family = "unix")]
+                "gz" => {
+                    let mut archive = tar::Archive::new(GzDecoder::new(bytes.as_ref()));
+                    for mut entry in archive.entries().unwrap().filter_map(|e| e.ok()) {
+                        if entry.path().unwrap().ends_with(name) {
+                            entry.unpack(binary_path).unwrap();
+                        }
+                    }
+                }
+                #[cfg(target_os = "windows")]
+                "zip" => {
+                    use std::{fs::File, io::Cursor};
+                    let mut archive = zip::ZipArchive::new(Cursor::new(bytes.as_ref())).unwrap();
+                    let mut file = archive.by_name(&format!("{name}.exe")).unwrap();
+
+                    let mut output = File::create(binary_path).unwrap();
+                    std::io::copy(&mut file, &mut output).unwrap();
+                }
+                _ => panic!("unsupported format"),
+            };
+            self.lock().unwrap().prog += part_progress / 2.0;
+            self.lock().unwrap().msg = format!("Done updating {name}");
+        }
+        Ok(())
+    }
+
+    pub fn get_version_binary(path: &Path) -> Result<String, std::io::Error> {
+        let mut cmd = Command::new(path);
+        cmd.arg("--version");
+        let output = cmd.output()?;
+        let first_line = str::from_utf8(&output.stdout)
+            .unwrap()
+            .lines()
+            .next()
+            .unwrap();
+        let re = Regex::new(r"\b(v?\d+\.\d+(?:\.\d+){0,2})\b").unwrap();
+        let mut version = re.captures(first_line).unwrap()[0].to_string();
+        if !version.starts_with('v') {
+            version.insert(0, 'v');
+        }
+        Ok(version)
+    }
+
+    async fn get_binary(
+        client: &Client,
+        name: &str,
+        version: &str,
+        source: &str,
+    ) -> Result<(Bytes, String), reqwest::Error> {
+        let url = match name {
+            "gupax" => Self::standard_download_url(source, name, version),
+            "p2pool" => Self::standard_download_url(source, name, version),
+            "xmrig" => Self::standard_download_url(source, name, &version.replace('v', "")),
+            "xmrig-proxy" => Self::standard_download_url(source, name, &version.replace('v', "")),
+            // node does not have the binaries in the release but on getmonero.org
+            // If the given source is github.com/monero-project/monero, download on getmonero.org
+            "monerod" => {
+                #[cfg(target_os = "linux")]
+                let os_target = "linux";
+                #[cfg(target_os = "windows")]
+                let os_target = "win";
+                #[cfg(target_os = "macos")]
+                let os_target = "mac";
+                #[cfg(target_family = "windows")]
+                let ext = "zip";
+                #[cfg(target_family = "unix")]
+                let ext = "tar.bz2";
+                if source == "github.com/monero-project/monero" {
+                    [
+                        "https://downloads.getmonero.org/cli/monero-",
+                        os_target,
+                        "-",
+                        ARCH_TARGET,
+                        "-",
+                        version,
+                        ".",
+                        ext,
+                    ]
+                    .concat()
+                } else {
+                    [
+                        "https://",
+                        source,
+                        "releases/download/",
+                        "monero-",
+                        os_target,
+                        "-",
+                        ARCH_TARGET,
+                        "-",
+                        version,
+                        ".",
+                        ext,
+                    ]
+                    .concat()
+                }
+            }
+            _ => panic!("unknown name"),
+        };
+        let extension = url.split('.').next_back().unwrap();
+        dbg!(&url);
+        let bytes = client.get(&url).send().await?.bytes().await?;
+        Ok((bytes, extension.to_owned()))
+    }
+
+    fn standard_download_url(source: &str, name: &str, version: &str) -> String {
+        [
+            "https://",
+            source,
+            "/releases/download/",
+            version,
+            "/",
+            name,
+            "-",
+            version,
+            "-",
+            OS_TARGET,
+            "-",
+            ARCH_TARGET,
+            ".",
+            ARCHIVE_EXT,
+        ]
+        .concat()
     }
 
     // Get a temporary random folder for package download contents
     // This used to use [std::env::temp_dir()] but there were issues
     // using [std::fs::rename()] on tmpfs -> disk (Invalid cross-device link (os error 18)).
     // So, uses the [Gupax] binary directory as a base, something like [/home/hinto/gupax/gupax_update_SG4xsDdVmr]
+    // Rename must be used on the same filesystem, but temp_dir could use a different filesystem than gupax.
+    #[cfg(target_os = "windows")]
     pub fn get_tmp_dir() -> Result<String, anyhow::Error> {
+        use rand::{RngExt, distr::Alphanumeric, rng};
         let rand_string: String = rng()
             .sample_iter(&Alphanumeric)
             .take(10)
             .map(char::from)
             .collect();
         let base = get_exe_dir()?;
-        #[cfg(target_os = "windows")]
         let tmp_dir = format!("{}{}{}{}", base, r"\gupax_update_", rand_string, r"\");
-        #[cfg(target_family = "unix")]
-        let tmp_dir = format!("{}{}{}{}", base, "/gupax_update_", rand_string, "/");
         info!("Update | Temporary directory ... {tmp_dir}");
         Ok(tmp_dir)
     }
+}
 
-    #[cold]
-    #[inline(never)]
-    // Intermediate function that spawns a new thread
-    // which starts the async [start()] function that
-    // actually contains the code. This is so that everytime
-    // an update needs to happen (Gupax tab, auto-update), the
-    // code only needs to be edited once, here.
-    pub fn spawn_thread(
-        og: &Arc<Mutex<State>>,
-        gupax: &crate::disk::state::Gupax,
-        state_path: &Path,
-        update: &Arc<Mutex<Update>>,
-        error_state: &mut ErrorState,
-        restart: &Arc<Mutex<Restart>>,
-    ) {
-        // We really shouldn't be in the function for
-        // the Linux distro Gupax (UI gets disabled)
-        // but if somehow get in here, just return.
-        #[cfg(feature = "distro")]
-        error!("Update | This is the [Linux distro] version of Gupax, updates are disabled");
-        #[cfg(feature = "distro")]
-        return;
-        // verify validity of absolute path for p2pool, xmrig and xmrig-proxy only if we want to update them.
-        if og.lock().unwrap().gupax.auto.bundled {
-            // Check P2Pool path for safety
-            // Attempt relative to absolute path
-            // it's ok if file doesn't exist. User could enable bundled version for the first time.
-            let p2pool_path = match into_absolute_path(gupax.p2pool_path.clone()) {
-                Ok(p) => p,
-                Err(e) => {
-                    error_state.set(
-                        format!(
-                            "Provided P2Pool path could not be turned into an absolute path: {e}"
-                        ),
-                        ErrorFerris::Error,
-                        ErrorButtons::Okay,
-                    );
-                    return;
-                }
-            };
-            // Check XMRig path for safety
-            let xmrig_path = match into_absolute_path(gupax.xmrig_path.clone()) {
-                Ok(p) => p,
-                Err(e) => {
-                    error_state.set(
-                        format!(
-                            "Provided XMRig path could not be turned into an absolute path: {e}"
-                        ),
-                        ErrorFerris::Error,
-                        ErrorButtons::Okay,
-                    );
-                    return;
-                }
-            };
-            // Check node path for safety
-            let node_path = match into_absolute_path(gupax.node_path.clone()) {
-                Ok(p) => p,
-                Err(e) => {
-                    error_state.set(
-                        format!(
-                            "Provided Node path could not be turned into an absolute path: {e}"
-                        ),
-                        ErrorFerris::Error,
-                        ErrorButtons::Okay,
-                    );
-                    return;
-                }
-            };
-            // Check XMRig-Proxy path for safety
-            let xmrig_proxy_path = match into_absolute_path(gupax.xmrig_proxy_path.clone()) {
-                Ok(p) => p,
-                Err(e) => {
-                    error_state.set(
-                        format!(
-                            "Provided XMRig-Proxy path could not be turned into an absolute path: {e}"
-                        ),
-                        ErrorFerris::Error,
-                        ErrorButtons::Okay,
-                    );
-                    return;
-                }
-            };
-            update.lock().unwrap().path_p2pool = p2pool_path.display().to_string();
-            update.lock().unwrap().path_xmrig = xmrig_path.display().to_string();
-            update.lock().unwrap().path_xp = xmrig_proxy_path.display().to_string();
-            update.lock().unwrap().path_node = node_path.display().to_string();
+impl InnerUpdate {
+    pub fn releases_by_name(&mut self, name: &str) -> &mut Vec<Release> {
+        match name {
+            "gupax" => &mut self.gupax_versions,
+            "p2pool" => &mut self.p2pool_versions,
+            "xmrig" => &mut self.xmrig_versions,
+            "xmrig-proxy" => &mut self.xp_versions,
+            "monerod" => &mut self.node_versions,
+            _ => panic!("unknown name"),
         }
-
-        // Clone before thread spawn
-        let og = Arc::clone(og);
-        let state_ver = Arc::clone(&og.lock().unwrap().version);
-        let state_path = state_path.to_path_buf();
-        let update = Arc::clone(update);
-        let restart = Arc::clone(restart);
-        info!("Spawning update thread...");
-        std::thread::spawn(move || {
-            match Update::start(update.clone(), og.clone(), restart) {
-                Ok(_) => {
-                    info!("Update | Saving state...");
-                    let original_version = og.lock().unwrap().version.clone();
-                    og.lock().unwrap().version = state_ver;
-                    let mut state = og.lock().unwrap().to_owned();
-                    match State::save(&mut state, &state_path) {
-                        Ok(_) => {
-                            info!("Update ... OK");
-                            *og.lock().unwrap() = state;
-                        }
-                        Err(e) => {
-                            warn!("Update | Saving state ... FAIL: {e}");
-                            og.lock().unwrap().version = original_version;
-                            *update.lock().unwrap().msg.lock().unwrap() =
-                                "Saving new versions into state failed".to_string();
-                        }
-                    };
-                }
-                Err(e) => {
-                    info!("Update ... FAIL: {e}");
-                    *update.lock().unwrap().msg.lock().unwrap() =
-                        format!("{MSG_FAILED} | {e}\n{MSG_FAILED_HELP}");
-                }
-            };
-            *update.lock().unwrap().updating.lock().unwrap() = false;
-        });
-    }
-
-    #[cold]
-    #[inline(never)]
-    // Download process:
-    // 0. setup tor, client, http, etc
-    // 1. fill vector with all enums
-    // 2. loop over vec, download metadata
-    // 3. if current == version, remove from vec
-    // 4. loop over vec, download links
-    // 5. extract, upgrade
-    #[allow(clippy::await_holding_lock)]
-    #[tokio::main]
-    pub async fn start(
-        update: Arc<Mutex<Self>>,
-        og: Arc<Mutex<State>>,
-        restart: Arc<Mutex<Restart>>,
-    ) -> Result<(), anyhow::Error> {
-        #[cfg(feature = "distro")]
-        error!("Update | This is the [Linux distro] version of Gupax, updates are disabled");
-        #[cfg(feature = "distro")]
-        return Err(anyhow!(
-            "This is the [Linux distro] version of Gupax, updates are disabled"
-        ));
-
-        //---------------------------------------------------------------------------------------------------- Init
-        *update.lock().unwrap().updating.lock().unwrap() = true;
-        // Set timer
-        let now = std::time::Instant::now();
-
-        // Set progress bar
-        *update.lock().unwrap().msg.lock().unwrap() = MSG_START.to_string();
-        *update.lock().unwrap().prog.lock().unwrap() = 0.0;
-        info!("Update | {INIT}");
-
-        // Get temporary directory
-        let msg = MSG_TMP.to_string();
-        info!("Update | {msg}");
-        *update.lock().unwrap().msg.lock().unwrap() = msg;
-        let tmp_dir = Self::get_tmp_dir()?;
-        std::fs::create_dir(&tmp_dir)?;
-
-        // Generate fake user-agent
-        let user_agent = get_user_agent();
-        *update.lock().unwrap().prog.lock().unwrap() = 5.0;
-
-        // Create HTTPS client
-        let lock = update.lock().unwrap();
-        let msg = MSG_HTTPS.to_string();
-        info!("Update | {msg}");
-        *lock.msg.lock().unwrap() = msg;
-        drop(lock);
-        let client = Client::new();
-        *update.lock().unwrap().prog.lock().unwrap() += 5.0;
-        info!(
-            "Update | Init ... OK ... {}%",
-            update.lock().unwrap().prog.lock().unwrap()
-        );
-
-        //---------------------------------------------------------------------------------------------------- Metadata
-        *update.lock().unwrap().msg.lock().unwrap() = MSG_METADATA.to_string();
-        info!("Update | {METADATA}");
-        // Loop process:
-        // reqwest will retry himself
-        // Send to async
-        let new_ver = if let Ok(new_ver) =
-            get_metadata(&client, GUPAX_METADATA.to_string(), user_agent).await
-        {
-            new_ver
-        } else {
-            error!("Update | Metadata ... FAIL");
-            return Err(anyhow!("Metadata fetch failed"));
-        };
-
-        *update.lock().unwrap().prog.lock().unwrap() += 10.0;
-        info!("Update | Gupax {new_ver} ... OK");
-
-        //---------------------------------------------------------------------------------------------------- Compare
-        *update.lock().unwrap().msg.lock().unwrap() = MSG_COMPARE.to_string();
-        info!("Update | {COMPARE}");
-        let diff = GUPAX_VERSION != new_ver;
-        if diff {
-            info!("Update | Gupax {GUPAX_VERSION} != {new_ver} ... ADDING");
-        } else {
-            info!("Update | All packages up-to-date ... RETURNING");
-            *update.lock().unwrap().prog.lock().unwrap() = 100.0;
-            *update.lock().unwrap().msg.lock().unwrap() = MSG_UP_TO_DATE.to_string();
-            return Ok(());
-        }
-        *update.lock().unwrap().prog.lock().unwrap() += 5.0;
-        info!(
-            "Update | Compare ... OK ... {}%",
-            update.lock().unwrap().prog.lock().unwrap()
-        );
-
-        // Return if 0 (all packages up-to-date)
-        // Get amount of packages to divide up the percentage increases
-
-        //---------------------------------------------------------------------------------------------------- Download
-        *update.lock().unwrap().msg.lock().unwrap() = format!("{MSG_DOWNLOAD} Gupax");
-        info!("Update | {DOWNLOAD}");
-        // Clone data before async
-        let version = new_ver;
-        // Download link = PREFIX + Version (found at runtime) + SUFFIX + Version + EXT
-        // Example: https://github.com/Cyrix126/gupax/releases/download/v1.0.0/gupax-v1.0.0-linux-x64-standalone.tar.gz
-        // prefix: https://github.com/Cyrix126/gupax/releases/download
-        // version: v1.0.0
-        // suffix: gupax
-        // version: v1.0.0
-        // os
-        // arch
-        // standalone or bundled
-        // archive extension
-        let bundle = if og.lock().unwrap().gupax.auto.bundled {
-            "bundle"
-        } else {
-            "standalone"
-        };
-        let link = [
-            "https://github.com/gupax-io/gupax/releases/download/",
-            &version,
-            "/gupax-",
-            &version,
-            "-",
-            OS_TARGET,
-            "-",
-            ARCH_TARGET,
-            "-",
-            bundle,
-            ".",
-            ARCHIVE_EXT,
-        ]
-        .concat();
-        info!("Update | Gupax ... {link}");
-        let bytes = if let Ok(bytes) = get_bytes(&client, link, user_agent).await {
-            bytes
-        } else {
-            error!("Update | Download ... FAIL");
-            return Err(anyhow!("Download failed"));
-        };
-        *update.lock().unwrap().prog.lock().unwrap() += 30.0;
-        info!("Update | Gupax ... OK");
-        info!(
-            "Update | Download ... OK ... {}%",
-            *update.lock().unwrap().prog.lock().unwrap()
-        );
-
-        //---------------------------------------------------------------------------------------------------- Extract
-        *update.lock().unwrap().msg.lock().unwrap() = format!("{MSG_EXTRACT} Gupax");
-        info!("Update | {EXTRACT}");
-        let tmp = tmp_dir.to_owned();
-        #[cfg(target_os = "windows")]
-        ZipArchive::extract(
-            &mut ZipArchive::new(std::io::Cursor::new(bytes.as_ref()))?,
-            tmp,
-        )?;
-        #[cfg(target_family = "unix")]
-        tar::Archive::new(flate2::read::GzDecoder::new(bytes.as_ref())).unpack(tmp)?;
-        *update.lock().unwrap().prog.lock().unwrap() += 5.0;
-        info!("Update | Gupax ... OK");
-        info!(
-            "Update | Extract ... OK ... {}%",
-            *update.lock().unwrap().prog.lock().unwrap()
-        );
-
-        //---------------------------------------------------------------------------------------------------- Upgrade
-        // if bundled, directories p2pool, xmrig and xmrig-proxy will exist.
-        // if not, only gupax binary will be present.
-        // 1. Walk directories
-        //
-        // 3. Rename tmp path into current path
-        // 4. Update [State/Version]
-        *update.lock().unwrap().msg.lock().unwrap() = format!("Gupax {MSG_UPGRADE}");
-        info!("Update | {UPGRADE}");
-        // If this bool doesn't get set, something has gone wrong because
-        // we _didn't_ find a binary even though we downloaded it.
-        let mut found = false;
-        for entry in WalkDir::new(tmp_dir.clone()) {
-            let entry = entry?.clone();
-            // If not a file, continue
-            if !entry.file_type().is_file() {
-                continue;
-            }
-            let name = entry
-                .file_name()
-                .to_str()
-                .ok_or_else(|| anyhow!("WalkDir basename failed"))?;
-            let path = match name {
-                GUPAX_BINARY => update.lock().unwrap().path_gupax.clone(),
-                P2POOL_BINARY => update.lock().unwrap().path_p2pool.clone(),
-                XMRIG_BINARY => update.lock().unwrap().path_xmrig.clone(),
-                XMRIG_PROXY_BINARY => update.lock().unwrap().path_xp.clone(),
-                NODE_BINARY => update.lock().unwrap().path_node.clone(),
-                _ => continue,
-            };
-            found = true;
-            let path = Path::new(&path);
-            // Unix can replace running binaries no problem (they're loaded into memory)
-            // Windows locks binaries in place, so we must move (rename) current binary
-            // into the temp folder, then move the new binary into the old ones spot.
-            // Clearing the temp folder is now moved at startup instead at the end
-            // of this function due to this behavior, thanks Windows.
-            #[cfg(target_os = "windows")]
-            if path.exists() {
-                let tmp_windows = match name {
-                    GUPAX_BINARY => tmp_dir.clone() + "gupax_old.exe",
-                    P2POOL_BINARY => tmp_dir.clone() + "p2pool_old.exe",
-                    XMRIG_BINARY => tmp_dir.clone() + "xmrig_old.exe",
-                    XMRIG_PROXY_BINARY => tmp_dir.clone() + "xmrig-proxy_old.exe",
-                    NODE_BINARY => tmp_dir.clone() + "monerod_old.exe",
-                    _ => continue,
-                };
-                info!(
-                    "Update | WINDOWS ONLY ... Moving old [{}] -> [{}]",
-                    path.display(),
-                    tmp_windows
-                );
-                std::fs::rename(path, tmp_windows)?;
-            }
-            info!(
-                "Update | Moving new [{}] -> [{}]",
-                entry.path().display(),
-                path.display()
-            );
-            // if bundled, create directory for p2pool, xmrig and xmrig-proxy if not present
-            if og.lock().unwrap().gupax.auto.bundled
-                && (name == P2POOL_BINARY
-                    || name == XMRIG_BINARY
-                    || name == XMRIG_PROXY_BINARY
-                    || name == NODE_BINARY)
-            {
-                std::fs::create_dir_all(
-                    path.parent()
-                        .ok_or_else(|| anyhow!(format!("{name} path failed")))?,
-                )?;
-            }
-            // Move downloaded path into old path
-            std::fs::rename(entry.path(), path)?;
-            // If we're updating Gupax, set the [Restart] state so that the user knows to restart
-            *restart.lock().unwrap() = Restart::Yes;
-            *update.lock().unwrap().prog.lock().unwrap() += 5.0;
-        }
-        if !found {
-            return Err(anyhow!("Fatal error: Package binary could not be found"));
-        }
-
-        // Remove tmp dir (on Unix)
-        #[cfg(target_family = "unix")]
-        info!("Update | Removing temporary directory ... {tmp_dir}");
-        #[cfg(target_family = "unix")]
-        std::fs::remove_dir_all(&tmp_dir)?;
-
-        let seconds = now.elapsed().as_secs();
-        info!("Update | Seconds elapsed ... [{seconds}s]");
-        *update.lock().unwrap().msg.lock().unwrap() =
-            format!("Updated from {GUPAX_VERSION} to {version}\nYou need to restart Gupax.");
-        *update.lock().unwrap().prog.lock().unwrap() = 100.0;
-        Ok(())
     }
 }
 
-//---------------------------------------------------------------------------------------------------- Pkg functions
-#[cold]
-#[inline(never)]
-// Generate fake [User-Agent] HTTP header
-pub fn get_user_agent() -> &'static str {
-    let index = FAKE_USER_AGENT.len() - 1;
-
-    let rand = rng().random_range(0..index);
-    let user_agent = FAKE_USER_AGENT[rand];
-    info!("Randomly selected User-Agent ({rand}/{index}) ... {user_agent}");
-    user_agent
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Release {
+    pub tag_name: String,
+    pub prerelease: bool,
+    pub body: String,
+    pub published_at: String,
 }
 
-#[cold]
-#[inline(never)]
-// Generate GET request based off input URI + fake user agent
-fn get_request(
-    client: &Client,
-    link: String,
-    user_agent: &'static str,
-) -> Result<RequestBuilder, anyhow::Error> {
-    Ok(client.get(link).header(USER_AGENT, user_agent))
-}
-
-#[cold]
-#[inline(never)]
-// Get metadata using [Generic hyper::client<C>] & [Request]
-// and change [version, prog] under an Arc<Mutex>
-async fn get_metadata(
-    client: &Client,
-    link: String,
-    user_agent: &'static str,
-) -> Result<String, Error> {
-    let request = get_request(client, link, user_agent)?;
-    let response = request.send().await?;
-    let body = response.json::<TagName>().await?;
-    Ok(body.tag_name)
-}
-
-#[cold]
-#[inline(never)]
-async fn get_bytes(
-    client: &Client,
-    link: String,
-    user_agent: &'static str,
-) -> Result<bytes::Bytes, anyhow::Error> {
-    let request = get_request(client, link, user_agent)?;
-    let mut response = request.send().await?;
-    // GitHub sends a 302 redirect, so we must follow
-    // the [Location] header... only if Reqwest had custom
-    // connectors so I didn't have to manually do this...
-    if response.headers().contains_key(LOCATION) {
-        response = get_request(
-            client,
-            response
-                .headers()
-                .get(LOCATION)
-                .ok_or_else(|| anyhow!("HTTP Location header GET failed"))?
-                .to_str()?
-                .to_string(),
-            user_agent,
-        )?
-        .send()
-        .await?;
+// TODO: pre-release must be shown as BETA.
+impl Display for Release {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.prerelease {
+            write!(f, "{} BETA", self.tag_name)
+        } else {
+            write!(f, "{}", self.tag_name)
+        }
     }
-    let body = response.bytes().await?;
-    Ok(body)
-}
-
-// This inherits the value of [tag_name] from GitHub's JSON API
-#[derive(Debug, Serialize, Deserialize)]
-struct TagName {
-    tag_name: String,
 }

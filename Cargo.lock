@@ -879,6 +879,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bzip2-rs"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "beeb59e7e4c811ab37cc73680c798c7a5da77fc9989c62b09138e31ee740f735"
+dependencies = [
+ "crc32fast",
+ "tinyvec",
+]
+
+[[package]]
 name = "calloop"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2762,6 +2772,7 @@ dependencies = [
  "benri",
  "bounded-vec-deque",
  "bytes",
+ "bzip2-rs",
  "cfg-if",
  "chrono",
  "clap",
@@ -2816,7 +2827,7 @@ dependencies = [
  "uuid",
  "walkdir",
  "wgpu",
- "windows 0.61.3",
+ "windows 0.62.2",
  "winres",
  "zeroize",
  "zip",

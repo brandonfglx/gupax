@@ -112,16 +112,16 @@ pub struct App {
     pub must_resize: bool, // Sets the flag so we know to [init_text_styles()]
     pub resizing: bool,    // Are we in the process of resizing? (For black fade in/out)
     // State
-    pub og: Arc<Mutex<State>>,      // og = Old state to compare against
-    pub state: State,               // state = Working state (current settings)
-    pub update: Arc<Mutex<Update>>, // State for update data [update.rs]
+    pub og: Arc<Mutex<State>>, // og = Old state to compare against
+    pub state: State,          // state = Working state (current settings)
+    pub update: Update,        // State for update data [update.rs]
     pub file_window: Arc<Mutex<FileWindow>>, // State for the path selector in [Gupax]
-    pub ping: Arc<Mutex<Ping>>,     // Ping data found in [node.rs]
+    pub ping: Arc<Mutex<Ping>>, // Ping data found in [node.rs]
     pub og_node_vec: Vec<(String, PoolNode)>, // Manual Node database
     pub node_vec: Vec<(String, PoolNode)>, // Manual Node database
     pub og_pool_vec: Vec<(String, PoolNode)>, // Manual Pool database
     pub pool_vec: Vec<(String, PoolNode)>, // Manual Pool database
-    pub diff: bool,                 // This bool indicates state changes
+    pub diff: bool,            // This bool indicates state changes
     // Restart state:
     // If Gupax updated itself, this represents that the
     // user should (but isn't required to) restart Gupax.
@@ -182,10 +182,42 @@ pub struct App {
     pub node_path: PathBuf,             // Node file path
     pub pool_path: PathBuf,             // Pool file path
     pub backup_hosts: BackupNodes,      // P2Pool backup nodes
-    pub version: &'static str,          // Gupax version
     pub name_version: String,           // [Gupax vX.X.X]
+    pub binaries_version: BinariesVersion,
     #[cfg(target_os = "windows")]
     pub xmrig_outside_warning_acknowledge: bool,
+}
+#[derive(Clone)]
+pub struct BinariesVersion {
+    pub gupax_version: &'static str,
+    pub node_version: String,
+    pub p2pool_version: String,
+    pub xmrig_version: String,
+    pub proxy_version: String,
+}
+
+impl Default for BinariesVersion {
+    fn default() -> Self {
+        Self {
+            gupax_version: GUPAX_VERSION,
+            node_version: String::new(),
+            p2pool_version: String::new(),
+            xmrig_version: String::new(),
+            proxy_version: String::new(),
+        }
+    }
+}
+
+impl BinariesVersion {
+    pub fn version_by_name(&self, name: &str) -> &str {
+        match name {
+            "p2pool" => &self.p2pool_version,
+            "xmrig" => &self.xmrig_version,
+            "xmrig-proxy" => &self.proxy_version,
+            "monerod" => &self.node_version,
+            _ => panic!("unknown name"),
+        }
+    }
 }
 
 impl AppEgui {
@@ -324,13 +356,7 @@ impl App {
             must_resize: true,
             og: arc_mut!(State::new()),
             state: State::new(),
-            update: arc_mut!(Update::new(
-                String::new(),
-                PathBuf::new(),
-                PathBuf::new(),
-                PathBuf::new(),
-                PathBuf::new()
-            )),
+            update: Update::new(),
             file_window: FileWindow::new(),
             og_node_vec: Node::new_vec(),
             node_vec: Node::new_vec(),
@@ -401,7 +427,6 @@ impl App {
             node_path: PathBuf::new(),
             pool_path: PathBuf::new(),
             backup_hosts: Arc::new(Mutex::new(vec![])),
-            version: GUPAX_VERSION,
             name_version: format!("Gupax {GUPAX_VERSION}"),
             ip_local,
             ip_public,
@@ -409,6 +434,7 @@ impl App {
             notifications_api,
             #[cfg(target_os = "windows")]
             xmrig_outside_warning_acknowledge: false,
+            binaries_version: BinariesVersion::default(),
         };
         //---------------------------------------------------------------------------------------------------- App init data that *could* panic
         info!("App Init | Getting EXE path...");
@@ -694,18 +720,7 @@ impl App {
         }
 
         // Apply TOML values to [Update]
-        info!("App Init | Applying TOML values to [Update]...");
-        let node_path = og.gupax.absolute_node_path.clone();
-        let p2pool_path = og.gupax.absolute_p2pool_path.clone();
-        let xmrig_path = og.gupax.absolute_xmrig_path.clone();
-        let xmrig_proxy_path = og.gupax.absolute_xp_path.clone();
-        app.update = arc_mut!(Update::new(
-            app.exe.clone(),
-            p2pool_path,
-            xmrig_path,
-            xmrig_proxy_path,
-            node_path
-        ));
+        app.update = Update::new();
 
         // Set state version as compiled in version
         info!("App Init | Setting state Gupax version...");
@@ -766,6 +781,24 @@ impl App {
         }
 
         info!("App ... OK");
+
+        // refresh version of binaries
+        match Update::get_version_binary(&app.state.gupax.absolute_node_path) {
+            Ok(v) => app.binaries_version.node_version = v,
+            Err(e) => warn!("Updating Node version failed: {e}"),
+        };
+        match Update::get_version_binary(&app.state.gupax.absolute_p2pool_path) {
+            Ok(v) => app.binaries_version.p2pool_version = v,
+            Err(e) => warn!("Updating p2pool version failed: {e}"),
+        };
+        match Update::get_version_binary(&app.state.gupax.absolute_xmrig_path) {
+            Ok(v) => app.binaries_version.xmrig_version = v,
+            Err(e) => warn!("Updating xmrig version failed: {e}"),
+        };
+        match Update::get_version_binary(&app.state.gupax.absolute_xp_path) {
+            Ok(v) => app.binaries_version.proxy_version = v,
+            Err(e) => warn!("Updating proxy version failed: {e}"),
+        };
 
         // Save the new version in the state file
         if let Err(e) = State::save(&mut app.state, &app.state_path) {
@@ -896,8 +929,7 @@ pub enum Tab {
     #[default]
     About,
     Status,
-    #[display("Gupax")]
-    Gupax,
+    Settings,
     Node,
     P2pool,
     Xmrig,
@@ -911,7 +943,7 @@ impl Tab {
         match self {
             Tab::About => None,
             Tab::Status => None,
-            Tab::Gupax => None,
+            Tab::Settings => None,
             Tab::Node => Some(ProcessName::Node),
             Tab::P2pool => Some(ProcessName::P2pool),
             Tab::Xmrig => Some(ProcessName::Xmrig),
@@ -923,7 +955,7 @@ impl Tab {
         match self {
             Tab::About => GUPAX_TAB_ABOUT,
             Tab::Status => GUPAX_TAB_STATUS,
-            Tab::Gupax => GUPAX_TAB_GUPAX,
+            Tab::Settings => GUPAX_TAB_GUPAX,
             Tab::Node => GUPAX_TAB_NODE,
             Tab::P2pool => GUPAX_TAB_P2POOL,
             Tab::Xmrig => GUPAX_TAB_XMRIG,
@@ -942,7 +974,7 @@ impl Tab {
     }
     pub fn from_show_processes(processes: &[ProcessName]) -> Vec<Self> {
         // tabs that can not be hidden
-        let mut tabs = vec![Self::About, Self::Status, Self::Gupax];
+        let mut tabs = vec![Self::About, Self::Status, Self::Settings];
         processes
             .iter()
             .for_each(|p| tabs.push(Tab::from_process_name(p)));

@@ -69,7 +69,7 @@ impl crate::app::App {
                 match self.error_state.buttons {
                     StayQuit => {
                         let mut text = "".to_string();
-                        if *self.update.lock().unwrap().updating.lock().unwrap() {
+                        if self.update.lock().unwrap().updating {
                             text = format!(
                                 "{text}\nUpdate is in progress...! Quitting may cause file corruption!"
                             );
@@ -351,6 +351,24 @@ impl crate::app::App {
                     Quit => {
                         if ui.add_sized([width, height], Button::new("Quit")).clicked() {
                             exit(1);
+                        }
+                    }
+                    Confirm => {
+                        
+                        if ui
+                            .add_sized([width, height / 2.0], Button::new("Continue"))
+                            .clicked()
+                        {
+                            self.error_state.reset()
+                            
+                        }
+                        if key.is_esc()
+                            || ui
+                                .add_sized([width, height / 2.0], Button::new("Cancel"))
+                                .clicked()
+                        {
+                            self.error_state.reset();
+                            self.error_state.msg = "Canceled".to_string();
                         }
                     }
                 }

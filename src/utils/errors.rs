@@ -12,6 +12,7 @@ pub enum ErrorButtons {
     Quit,
     WindowsAdmin,
     Debug,
+    Confirm,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

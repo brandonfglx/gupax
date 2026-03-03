@@ -5,8 +5,8 @@ use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
 use crate::utils::constants::{
-    P2POOL_ADVANCED, P2POOL_CRAWLER, P2POOL_SIMPLE, STATUS_SUBMENU_HASHRATE, STATUS_SUBMENU_P2POOL,
-    STATUS_SUBMENU_PROCESSES,
+    GUPAX_ADVANCED, GUPAX_SIMPLE, GUPAX_UPDATES, P2POOL_ADVANCED, P2POOL_CRAWLER, P2POOL_SIMPLE,
+    STATUS_SUBMENU_HASHRATE, STATUS_SUBMENU_P2POOL, STATUS_SUBMENU_PROCESSES,
 };
 
 /// A submenu
@@ -53,6 +53,22 @@ impl Submenu for SubmenuP2pool {
             Self::Simple => P2POOL_SIMPLE,
             Self::Advanced => P2POOL_ADVANCED,
             Self::Crawler => P2POOL_CRAWLER,
+        }
+    }
+}
+#[derive(Clone, Copy, Eq, PartialEq, Debug, Deserialize, Serialize, Default, Display, EnumIter)]
+pub enum SubmenuGupax {
+    #[default]
+    Simple,
+    Advanced,
+    Updates,
+}
+impl Submenu for SubmenuGupax {
+    fn hover_text(&self) -> &'static str {
+        match self {
+            Self::Simple => GUPAX_SIMPLE,
+            Self::Advanced => GUPAX_ADVANCED,
+            Self::Updates => GUPAX_UPDATES,
         }
     }
 }

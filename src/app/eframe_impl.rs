@@ -12,7 +12,7 @@ use derive_more::derive::{Deref, DerefMut};
 use log::debug;
 
 impl eframe::App for AppEgui {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut app = self.inner.lock();
         // *-------*
         // | DEBUG |
@@ -117,7 +117,7 @@ impl eframe::App for AppEgui {
         // but also we don't want the user to be able to start it in this case.
         let p_xvb = process_states.find_mut(ProcessName::Xvb);
         p_xvb.alive = p_xvb.state != ProcessState::Dead;
-        app.middle_panel(ctx, frame, key, &process_states);
+        app.middle_panel(ctx, key, &process_states);
     }
 }
 #[derive(Debug)]

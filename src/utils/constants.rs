@@ -16,10 +16,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pub const GUPAX_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION")); // e.g: v1.0.0
-pub const P2POOL_VERSION: &str = "v4.12";
-pub const XMRIG_VERSION: &str = "v6.24.0";
-pub const XMRIG_PROXY_VERSION: &str = "v6.24.0";
-pub const NODE_VERSION: &str = "v18.4.4";
 pub const COMMIT: &str = env!("COMMIT"); // set in build.rs
 // e.g: Gupax_v1_0_0
 // Would have been [Gupax_v1.0.0] but P2Pool truncates everything after [.]
@@ -323,10 +319,8 @@ pub const STATUS_SUBMENU_OTHER_BENCHMARKS: &str =
     "How many benchmarks this CPU has had posted to [https://xmrig.com/benchmark]";
 
 // Gupax
-pub const GUPAX_UPDATE: &str = "Check for updates on Gupax and bundled versions of P2Pool and XMRig via GitHub's API and upgrade automatically";
 pub const GUPAX_AUTO_UPDATE: &str = "Automatically check for updates at startup";
 pub const GUPAX_AUTO_CRAWL: &str = "Start the P2Pool compatible Nodes Finder at startup.\nIt will crawl the monero network to find nodes if the ones already found are not online";
-pub const GUPAX_BUNDLED_UPDATE: &str = "Update XMRig and P2Pool with bundled versions of latest Gupax. It will replace any present xmrig and p2pool binary in their specified path.";
 pub const GUPAX_SHOULD_RESTART: &str = "A restart is required to apply changes";
 // #[cfg(not(target_os = "macos"))]
 // pub const GUPAX_UPDATE_VIA_TOR:   &str = "Update through the Tor network. Tor is embedded within Gupax; a Tor system proxy is not required";
@@ -362,14 +356,17 @@ pub const GUPAX_TAB_XVB: &str = "Set the tab Gupax starts on to: XvB";
 pub const GUPAX_TAB_NODE: &str = "Set the default tab Gupax starts on to: Node";
 
 pub const GUPAX_SIMPLE: &str = r#"Use simple Gupax settings:
-  - Update button
   - Basic toggles"#;
 pub const GUPAX_ADVANCED: &str = r#"Use advanced Gupax settings:
-  - Update button
   - Basic toggles
   - P2Pool/XMRig binary path selector
   - Gupax resolution sliders
   - Gupax start-up tab selector"#;
+pub const GUPAX_UPDATES: &str = r#"Use Updates Gupax settings:
+  - Choose binaries source and version
+  - update checker frequency
+  - automatic updates
+  - automatic restart"#;
 pub const GUPAX_SELECT: &str = "Open a file explorer to select a file";
 pub const GUPAX_PATH_P2POOL: &str = "The location of the P2Pool binary: Both absolute and relative paths are accepted; A red [X] will appear if there is no file found at the given path";
 pub const GUPAX_PATH_XMRIG: &str = "The location of the XMRig binary: Both absolute and relative paths are accepted; A red [X] will appear if there is no file found at the given path";

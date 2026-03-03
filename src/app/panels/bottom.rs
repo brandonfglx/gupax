@@ -1,7 +1,7 @@
 use std::sync::{Arc, OnceLock};
 
 use crate::app::eframe_impl::{ProcessStateGui, ProcessStatesGui};
-use crate::app::submenu_enum::{Submenu, SubmenuP2pool, SubmenuStatus};
+use crate::app::submenu_enum::{Submenu, SubmenuGupax, SubmenuP2pool, SubmenuStatus};
 use crate::app::{Restart, keys::KeyPressed};
 use crate::disk::node::Node;
 use crate::disk::pool::Pool;
@@ -470,7 +470,7 @@ impl crate::app::App {
     fn submenu(&mut self, ui: &mut Ui) {
         match self.tab {
             Tab::About => {}
-            Tab::Gupax => self.gupax_submenu(ui),
+            Tab::Settings => Self::gupax_submenu(&mut self.state.gupax.submenu, ui),
             Tab::Status => Self::status_submenu(&mut self.state.status.submenu, ui),
             Tab::Node => self.node_submenu(ui),
             Tab::P2pool => Self::p2pool_submenu(&mut self.state.p2pool.submenu, ui),
@@ -478,13 +478,6 @@ impl crate::app::App {
             Tab::XmrigProxy => self.xp_submenu(ui),
             Tab::Xvb => self.xvb_submenu(ui),
         }
-    }
-    fn gupax_submenu(&mut self, ui: &mut Ui) {
-        Self::simple_advanced_submenu(
-            ui,
-            &mut self.state.gupax.simple,
-            (GUPAX_SIMPLE, GUPAX_ADVANCED),
-        );
     }
     fn node_submenu(&mut self, ui: &mut Ui) {
         Self::simple_advanced_submenu(
@@ -540,6 +533,30 @@ impl crate::app::App {
             // should be calculated from the len of variants and their name
             let width = ((ui.available_width() / 1.5 / 3.0) - spacing).max(0.0);
             let variants = SubmenuP2pool::iter();
+            let nb_variants = variants.len();
+            for (nb, variant) in variants.enumerate() {
+                if ui
+                    .add_sized(
+                        [width, ui.available_height()],
+                        Button::selectable(*state_submenu == variant, variant.to_string()),
+                    )
+                    .on_hover_text(variant.hover_text())
+                    .clicked()
+                {
+                    *state_submenu = variant;
+                }
+                if nb != nb_variants - 1 {
+                    ui.separator();
+                }
+            }
+        });
+    }
+    fn gupax_submenu(state_submenu: &mut SubmenuGupax, ui: &mut Ui) {
+        ui.group(|ui| {
+            let spacing = spacing(ui);
+            // should be calculated from the len of variants and their name
+            let width = ((ui.available_width() / 1.5 / 3.0) - spacing).max(0.0);
+            let variants = SubmenuGupax::iter();
             let nb_variants = variants.len();
             for (nb, variant) in variants.enumerate() {
                 if ui

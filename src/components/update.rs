@@ -47,7 +47,7 @@ use std::{
 
 //---------------------------------------------------------------------------------------------------- Constants
 // Package naming schemes:
-// gupax  | gupax-vX.X.X-(windows|macos|linux)-(x64|arm64)-(standalone|bundle).(zip|tar.gz)
+// gupax  | gupax-vX.X.X-(windows|macos|linux)-(x64|arm64).(zip|tar.gz)
 // Download link = PREFIX + Version (found at runtime) + SUFFIX + Version + EXT
 // Example: https://github.com/hinto-janai/gupax/releases/download/v0.0.1/gupax-v0.0.1-linux-standalone-x64.tar.gz
 //

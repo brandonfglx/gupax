@@ -115,7 +115,7 @@ When Gupax updates, it walks the directories of the extracted `zip/tar` searchin
 Windows versions of Gupax also need the file to end with `.exe`.
 
 The actual `zip/tar` matching is static, however. They have to be packaged exactly with the following naming scheme. If an exact match is not found, it will error:
-- `gupax-vX.X.X-(windows|macos|linux)-(x64|arm64)-(standalone|bundle).(zip|tar.gz)`
+- `gupax-vX.X.X-(windows|macos|linux)-(x64|arm64).(zip|tar.gz)`
 - `p2pool-vX.X.X-(windows|macos|linux)-(x64|aarch64).(zip|tar.gz)`
 - `xmrig-X.X.X-(msvc-win64|macos-x64|macos-arm64|linux-static-x64).(zip|tar.gz)`
 

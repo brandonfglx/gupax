@@ -210,11 +210,13 @@ impl Default for BinariesVersion {
 
 impl BinariesVersion {
     pub fn version_by_name(&self, name: &str) -> &str {
+        dbg!(&name);
         match name {
             "p2pool" => &self.p2pool_version,
             "xmrig" => &self.xmrig_version,
             "xmrig-proxy" => &self.proxy_version,
             "monerod" => &self.node_version,
+            "gupax" => GUPAX_VERSION,
             _ => panic!("unknown name"),
         }
     }

@@ -39,11 +39,12 @@ use log::*;
 use regex::Regex;
 use reqwest::{Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, path::Path, thread};
+use std::{fmt::Display, fs::create_dir_all, path::Path, thread};
 use std::{
     process::Command,
     sync::{Arc, Mutex},
 };
+use thiserror::Error;
 
 //---------------------------------------------------------------------------------------------------- Constants
 // Package naming schemes:
@@ -160,7 +161,7 @@ impl Update {
                 update.lock().unwrap().updating = false;
                 return;
             }
-            // update to latest version
+            // update config to latest version
             Self::update_version_with_latest_version(
                 &mut gupax_settings.updates.gupax_version,
                 &update.lock().unwrap().gupax_versions,
@@ -192,8 +193,8 @@ impl Update {
                         "Binaries have been updated, you need to restart Gupax to apply the change",
                     ),
                     Err(e) => {
-                        update.lock().unwrap().msg = format!("Update failed: {e}");
-                        notif(&e.to_string())
+                        update.lock().unwrap().msg = format!("Update failed: {:?}", e);
+                        notif(&format!("{:?}", e));
                     }
                 }
             }
@@ -265,7 +266,13 @@ impl Update {
                 url.push_str("/releases");
             }
             dbg!(&url);
-            let updated_versions = client.get(url).send().await?.json::<Vec<Release>>().await?;
+            let updated_versions = client
+                .get(url)
+                .send()
+                .await?
+                .error_for_status()?
+                .json::<Vec<Release>>()
+                .await?;
             dbg!(&updated_versions);
 
             let mut update = self.lock().unwrap();
@@ -298,8 +305,8 @@ impl Update {
                     "A binary has been updated, you need to restart Gupax to apply the change",
                 ),
                 Err(e) => {
-                    update.lock().unwrap().msg = format!("Update failed: {e}");
-                    notif(&e.to_string())
+                    update.lock().unwrap().msg = format!("Update failed: {:?}", e);
+                    notif(&format!("{:?}", e))
                 }
             }
             update.lock().unwrap().updating = false;
@@ -312,11 +319,12 @@ impl Update {
         binaries: &Vec<String>,
         gupax_settings: &Gupax,
         binaries_version: &BinariesVersion,
-    ) -> Result<(), reqwest::Error> {
+    ) -> Result<(), UpdateError> {
         let client = self.lock().unwrap().client.clone();
         let part_progress = 100.0 / binaries.len() as f32;
         self.lock().unwrap().prog = 0.0;
         for name in binaries {
+            dbg!(&name);
             let source = gupax_settings.updates.source_by_name(name);
             let selected_version = gupax_settings.updates.selected_version_by_name(name);
             let current_version = binaries_version.version_by_name(name);
@@ -332,13 +340,23 @@ impl Update {
                     format!("The current version of {name} is already up to date");
                 continue;
             }
+            // create path only if path is valid and it doesn't exist
+            if binary_path.is_empty() {
+                return Err(UpdateError::EmptyPath(name.to_string()));
+            }
+            if binary_path.is_dir() {
+                return Err(UpdateError::PathIsDir(name.to_string()));
+            }
+            if let Some(dir) = binary_path.parent() {
+                create_dir_all(dir)?;
+            }
 
             // download selected_version
-            self.lock().unwrap().msg = format!("Downloading of the new release of {name}");
+            self.lock().unwrap().msg = format!("Downloading {name}");
             let (bytes, extension) =
                 Self::get_binary(&client, name, selected_version, source).await?;
             self.lock().unwrap().prog += part_progress / 2.0;
-            self.lock().unwrap().msg = format!("Extracting {name} binary");
+            self.lock().unwrap().msg = format!("Extracting {name} binary from the archive");
             // On windows, move current binary if it does exist
             #[cfg(target_os = "windows")]
             {
@@ -352,6 +370,7 @@ impl Update {
             match extension.as_str() {
                 #[cfg(target_family = "unix")]
                 "bz2" => {
+                    dbg!(&binary_path);
                     let mut archive =
                         tar::Archive::new(bzip2_rs::DecoderReader::new(bytes.as_ref()));
                     archive
@@ -363,6 +382,7 @@ impl Update {
                             if let Some(filename) = path.file_name()
                                 && filename == name.as_str()
                             {
+                                dbg!(&filename);
                                 return true;
                             }
                             false
@@ -374,9 +394,11 @@ impl Update {
                 }
                 #[cfg(target_family = "unix")]
                 "gz" => {
+                    dbg!(&binary_path);
                     let mut archive = tar::Archive::new(GzDecoder::new(bytes.as_ref()));
                     for mut entry in archive.entries().unwrap().filter_map(|e| e.ok()) {
                         if entry.path().unwrap().ends_with(name) {
+                            dbg!(&entry.path());
                             entry.unpack(binary_path).unwrap();
                         }
                     }
@@ -424,8 +446,12 @@ impl Update {
         let url = match name {
             "gupax" => Self::standard_download_url(source, name, version),
             "p2pool" => Self::standard_download_url(source, name, version),
-            "xmrig" => Self::standard_download_url(source, name, &version.replace('v', "")),
-            "xmrig-proxy" => Self::standard_download_url(source, name, &version.replace('v', "")),
+            "xmrig" => Self::standard_download_url(source, name, version)
+                .replace("-v", "-")
+                .replace("linux", "linux-static"),
+            "xmrig-proxy" => Self::standard_download_url(source, name, version)
+                .replace("-v", "-")
+                .replace("linux", "linux-static"),
             // node does not have the binaries in the release but on getmonero.org
             // If the given source is github.com/monero-project/monero, download on getmonero.org
             "monerod" => {
@@ -472,7 +498,14 @@ impl Update {
         };
         let extension = url.split('.').next_back().unwrap();
         dbg!(&url);
-        let bytes = client.get(&url).send().await?.bytes().await?;
+        let bytes = client
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes()
+            .await?;
+
         Ok((bytes, extension.to_owned()))
     }
 
@@ -546,4 +579,18 @@ impl Display for Release {
             write!(f, "{}", self.tag_name)
         }
     }
+}
+
+#[derive(Error, Debug)]
+pub enum UpdateError {
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+    #[error("Path of {0} is empty. Check the advanced submenu of the Settings tab")]
+    EmptyPath(String),
+    #[error(
+        "Path of {0} is a directory but it should be a file. Check the advanced submenu of the Settings tab"
+    )]
+    PathIsDir(String),
+    #[error(transparent)]
+    IoError(#[from] std::io::Error),
 }

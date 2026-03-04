@@ -1,5 +1,5 @@
 //---------------------------------------------------------------------------------------------------- [ErrorState] struct
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum ErrorButtons {
     YesQuit,
@@ -12,7 +12,7 @@ pub enum ErrorButtons {
     Quit,
     WindowsAdmin,
     Debug,
-    Confirm,
+    Confirm(String, String),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

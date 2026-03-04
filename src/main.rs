@@ -17,6 +17,7 @@
 
 // Hide the Window console for release mode
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![feature(path_is_empty)]
 // Only (windows|macos|linux) + (x64|arm64) are supported.
 #[cfg(not(target_pointer_width = "64"))]
 compile_error!("gupax is only compatible with 64-bit CPUs");

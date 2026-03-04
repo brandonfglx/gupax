@@ -265,6 +265,7 @@ pub struct UpdateSettings {
     pub proxy_version: String,
     pub proxy_source: String,
     pub check_version_frequency: Duration,
+    pub ask_download_start: bool,
     pub automatic_update: bool,
     pub automatic_restart: bool,
     pub beta: bool,
@@ -316,7 +317,7 @@ impl UpdateSettings {
 impl Default for UpdateSettings {
     fn default() -> Self {
         Self {
-            gupax_version: "latest".to_owned(),
+            gupax_version: "v2.0.0".to_owned(),
             gupax_source: "https://api.github.com/repos/gupax-io/gupax/releases".to_owned(),
             node_version: "v0.18.4.5".to_owned(),
             node_source: "https://api.github.com/repos/monero-project/monero/releases".to_owned(),
@@ -327,6 +328,7 @@ impl Default for UpdateSettings {
             proxy_version: "v6.24.0".to_owned(),
             proxy_source: "https://api.github.com/repos/xmrig/xmrig-proxy/releases".to_owned(),
             check_version_frequency: Duration::from_hours(12),
+            ask_download_start: true,
             automatic_update: false,
             automatic_restart: false,
             beta: false,

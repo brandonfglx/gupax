@@ -186,6 +186,7 @@ pub struct App {
     pub binaries_version: BinariesVersion,
     #[cfg(target_os = "windows")]
     pub xmrig_outside_warning_acknowledge: bool,
+    pub ask_download_start_acknowledge: bool,
 }
 #[derive(Clone)]
 pub struct BinariesVersion {
@@ -210,7 +211,6 @@ impl Default for BinariesVersion {
 
 impl BinariesVersion {
     pub fn version_by_name(&self, name: &str) -> &str {
-        dbg!(&name);
         match name {
             "p2pool" => &self.p2pool_version,
             "xmrig" => &self.xmrig_version,
@@ -436,6 +436,7 @@ impl App {
             notifications_api,
             #[cfg(target_os = "windows")]
             xmrig_outside_warning_acknowledge: false,
+            ask_download_start_acknowledge: false,
             binaries_version: BinariesVersion::default(),
         };
         //---------------------------------------------------------------------------------------------------- App init data that *could* panic

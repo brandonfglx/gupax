@@ -151,8 +151,14 @@ impl App {
                 "You are trying to downgrade Gupax. This is really dangerous as you could loose the ability to upgrade it and be stuck on the old version. You would need to re-install it manually. You also could loose your saved configuration"
             };
 
-            self.error_state
-                .set(msg, ErrorFerris::Panic, ErrorButtons::Confirm);
+            self.error_state.set(
+                msg,
+                ErrorFerris::Panic,
+                ErrorButtons::Confirm(
+                    "Yes downgrade".to_string(),
+                    "No Abort the downgrade".to_string(),
+                ),
+            );
             if self.error_state.msg == "Canceled" {
                 self.error_state.msg = "".to_string();
                 return false;
@@ -171,8 +177,14 @@ impl App {
         {
             warn!("Trying to downgrade");
             let msg = "You are trying to update to a BETA. Do this only if you want to help test unstable software.";
-            self.error_state
-                .set(msg, ErrorFerris::Panic, ErrorButtons::Confirm);
+            self.error_state.set(
+                msg,
+                ErrorFerris::Panic,
+                ErrorButtons::Confirm(
+                    "Yes, switch to BETA".to_string(),
+                    "No, stay in STABLE releases".to_string(),
+                ),
+            );
             if self.error_state.msg == "Canceled" {
                 self.error_state.msg = "".to_string();
                 return false;
@@ -204,7 +216,7 @@ impl App {
             ui.heading(name);
             ui.horizontal(|ui| {
                 let version = self.binaries_version.version_by_name(name);
-                ui.label("Version:    ");
+                ui.label("Currently installed version:    ");
                 ui.label(version);
             });
             ui.horizontal(|ui| {

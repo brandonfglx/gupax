@@ -175,13 +175,13 @@ impl crate::app::App {
                 };
                 let height = ui.available_height();
 
-                match self.error_state.buttons {
+                match &self.error_state.buttons {
                     UseDetectedLocalNode((rpc, zmq)) => {
                         if ui
                             .add_sized([width, height / 2.0], Button::new("Use the detected Node"))
                             .clicked()
                         {
-                            *self.helper.lock().unwrap().ports_detected_local_node.lock().unwrap() = Some((rpc, zmq));
+                            *self.helper.lock().unwrap().ports_detected_local_node.lock().unwrap() = Some((*rpc, *zmq));
                             self.error_state.reset();
                                 Helper::start_node(
                                 &self.helper,
@@ -353,16 +353,15 @@ impl crate::app::App {
                             exit(1);
                         }
                     }
-                    Confirm => {
+                    Confirm(yes, no) => {
                         if ui
-                            .add_sized([width, height / 2.0], Button::new("Continue"))
+                            .add_sized([width, height / 2.0], Button::new(yes.clone()))
                             .clicked()
                         {
-                            self.error_state.reset()
-                        }
-                        if key.is_esc()
+                            self.error_state.reset();
+                        } else if key.is_esc()
                             || ui
-                                .add_sized([width, height / 2.0], Button::new("Cancel"))
+                                .add_sized([width, height / 2.0], Button::new(no.clone()))
                                 .clicked()
                         {
                             self.error_state.reset();

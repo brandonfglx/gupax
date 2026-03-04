@@ -236,9 +236,11 @@ impl Update {
     pub fn refresh_versions(&self, binaries: Vec<String>, gupax_settings: Gupax) {
         let update = self.clone();
         thread::spawn(move || {
+            update.lock().unwrap().updating = true;
             if let Err(e) = update.spawn_refresh_versions(&binaries, &gupax_settings) {
                 notif(&e.to_string());
             }
+            update.lock().unwrap().updating = false;
         });
     }
 

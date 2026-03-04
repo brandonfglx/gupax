@@ -197,6 +197,8 @@ impl App {
         ui.horizontal(|ui|{
             ui.vertical(|ui|{
                 ui.add_space(SPACE / 2.0);
+                let updating = self.update.lock().unwrap().updating;
+        ui.add_enabled_ui(!updating, |ui|{
         if ui.button("Update Everything").on_hover_text("Update all binaries to the latest release").clicked() {
             for name in BINARIES_NAME {
                 if !(self.warn_downgrade(name) && self.warn_switch_beta(name))
@@ -207,6 +209,7 @@ impl App {
             self.update
                 .update_all(self.state.gupax.clone(), self.binaries_version.clone());
         }
+        });
             });
         ui.checkbox(&mut self.state.gupax.updates.beta, "Beta").on_hover_text("Participate in pre-release. Check only if you want to test release to come before they are stabilized. You will experience bugs.");
         });
@@ -229,14 +232,17 @@ impl App {
         });
     }
     fn refresh_versions_button(&mut self, ui: &mut Ui, name: &str) {
-        if ui
-            .button("Refresh")
-            .on_hover_text("Refresh available versions")
-            .clicked()
-        {
-            self.update
-                .refresh_versions(vec![name.to_string()], self.state.gupax.clone());
-        }
+        let updating = self.update.lock().unwrap().updating;
+        ui.add_enabled_ui(!updating, |ui| {
+            if ui
+                .button("Refresh")
+                .on_hover_text("Refresh available versions")
+                .clicked()
+            {
+                self.update
+                    .refresh_versions(vec![name.to_string()], self.state.gupax.clone());
+            }
+        });
     }
     fn update_binary_button(&mut self, ui: &mut Ui, name: &str) {
         let enable = !self
@@ -244,7 +250,8 @@ impl App {
             .lock()
             .unwrap()
             .releases_by_name(name)
-            .is_empty();
+            .is_empty()
+            && !self.update.lock().unwrap().updating;
         ui.add_enabled_ui(enable, |ui| {
             if ui
                 .button("Update")

@@ -394,6 +394,7 @@ impl Update {
             {
                 if binary_path.exists() {
                     let tmp_dir = Self::get_tmp_dir().unwrap();
+                    create_dir_all(&tmp_dir).unwrap();
                     let tmp_windows = tmp_dir + &format!("{name}.exe");
                     std::fs::rename(binary_path, tmp_windows).unwrap();
                 }

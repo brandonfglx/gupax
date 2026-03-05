@@ -28,8 +28,8 @@ impl App {
             self.update_progress(ui);
             ui.horizontal(|ui| {
                 self.update_all_widget(ui);
-                ui.group(|ui|{
-                self.horizontal_flex_button_update(ui);
+                ui.group(|ui| {
+                    self.horizontal_flex_button_update(ui);
                 });
             });
             ui.horizontal(|ui| {
@@ -46,27 +46,31 @@ impl App {
     fn view_changelog(&mut self, ui: &mut Ui) {
         ui.group(|ui| {
             ui.vertical_centered(|ui| {
-                ui.group(|ui|{
+                ui.group(|ui| {
                     if let Some(release) = &self.changelog_selected {
-                    ui.heading("Changelog");
-                    ui.label(
-                        RichText::new(format!(
-                            "{}\n{}\n{}",
-                            release.1,
-                            release.0.tag_name,
-                            release.0.published_at.date_naive(),
-                        ))
-                        .text_style(TextStyle::Button),
-                    );
-                    ScrollArea::vertical().show(ui, |ui| {
-                        CommonMarkViewer::new().show(ui, &mut self.markdown_cache, &release.0.body);
-                    });
-                } else {
-                ui.heading("Changelog");
-                    ui.label(
-                        "Click on a refresh button and then on a version to see the changelog",
-                    );
-                }
+                        ui.heading("Changelog");
+                        ui.label(
+                            RichText::new(format!(
+                                "{}\n{}\n{}",
+                                release.1,
+                                release.0.tag_name,
+                                release.0.published_at.date_naive(),
+                            ))
+                            .text_style(TextStyle::Button),
+                        );
+                        ScrollArea::vertical().show(ui, |ui| {
+                            CommonMarkViewer::new().show(
+                                ui,
+                                &mut self.markdown_cache,
+                                &release.0.body,
+                            );
+                        });
+                    } else {
+                        ui.heading("Changelog");
+                        ui.label(
+                            "Click on a refresh button and then on a version to see the changelog",
+                        );
+                    }
                 });
             });
         });
@@ -164,12 +168,10 @@ impl App {
     fn update_all_widget(&mut self, ui: &mut Ui) {
         ui.add_space(SPACE * 0.9);
         ui.group(|ui|{
-            
             ui.vertical(|ui|{
         ui.add_space(SPACE);
         ui.horizontal(|ui|{
             ui.vertical(|ui|{
-                
         ui.add_space(SPACE * 0.5);
                  let updating = self.update.lock().unwrap().updating;
         ui.add_enabled_ui(!updating, |ui|{
@@ -187,17 +189,12 @@ impl App {
             });
         ui.add_space(SPACE );
         ui.checkbox(&mut self.state.gupax.updates.beta, "Beta").on_hover_text("Participate in pre-release. Check only if you want to test release to come before they are stabilized. You will experience bugs.");           
-        
         });
         ui.add_space(SPACE * 0.5);
             });
         });
+    }
 
-        }
-                
-            
-        
-    
     fn binary_update_settings_widget(&mut self, ui: &mut Ui, name: &str) {
         ui.group(|ui| {
             ui.set_min_width((ui.available_width() / 2.0) - SPACE);
@@ -253,7 +250,7 @@ impl App {
                     vec![name.to_string()],
                     self.state.gupax.clone(),
                     self.binaries_version.clone(),
-                    self.restart.clone()
+                    self.restart.clone(),
                 );
             }
         });
@@ -325,7 +322,7 @@ impl App {
             "Gupax will be restarted at the end of an update.\nRestart Gupax to apply changes.",
         );
         let widgets = vec![notification_button, auto_update_button, auto_restart_button];
-       let text_style = TextStyle::Button;
+        let text_style = TextStyle::Button;
         ui.style_mut().override_text_style = Some(text_style);
         let spacing = 2.0;
         ScrollArea::horizontal().show(ui, |ui| {

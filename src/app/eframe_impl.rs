@@ -1,11 +1,12 @@
 use std::sync::{Arc, Mutex};
 
-use crate::app::submenu_enum::{SubmenuGupax, SubmenuP2pool};
+use crate::app::submenu_enum::SubmenuP2pool;
 use crate::app::{App, AppEgui, Tab};
 use crate::components::node::RemoteNodes;
 use crate::errors::{ErrorButtons, ErrorFerris};
 use crate::helper::{Helper, ProcessName, ProcessState};
 use crate::inits::init_text_styles;
+use crate::utils::errors::WarnUpdateData;
 use crate::{NODE_MIDDLE, P2POOL_MIDDLE, SECOND, XMRIG_MIDDLE, XMRIG_PROXY_MIDDLE, XVB_MIDDLE};
 use derive_more::derive::{Deref, DerefMut};
 use log::debug;
@@ -223,41 +224,28 @@ impl App {
                     if !xmrig_exist { "XMRig" } else { "" },
                     if !xp_exist { "XMRig-Proxy" } else { "" }
                 );
+                let mut binaries = vec![];
+                if !p2pool_exist {
+                    binaries.push("p2pool".to_string());
+                }
+                if !node_exist {
+                    binaries.push("monerod".to_string());
+                }
+                if !xmrig_exist {
+                    binaries.push("xmrig".to_string());
+                }
+                if !xp_exist {
+                    binaries.push("xmrig-proxy".to_string());
+                }
                 self.error_state.set(
                     msg,
                     ErrorFerris::Cute,
-                    ErrorButtons::Confirm(
-                        "Download missing binaries".to_string(),
-                        "No, and do not ask again".to_string(),
-                    ),
+                    ErrorButtons::WarnUpdate(WarnUpdateData {
+                        yes_button: "Download missing binaries".to_string(),
+                        no_button: "No, and do not ask again".to_string(),
+                        name: binaries.join(" "),
+                    }),
                 );
-                if self.error_state.msg != "Canceled" {
-                    self.ask_download_start_acknowledge = true;
-
-                    let mut binaries = vec![];
-                    if !p2pool_exist {
-                        binaries.push("p2pool".to_string());
-                    }
-                    if !node_exist {
-                        binaries.push("monerod".to_string());
-                    }
-                    if !xmrig_exist {
-                        binaries.push("xmrig".to_string());
-                    }
-                    if !xp_exist {
-                        binaries.push("xmrig-proxy".to_string());
-                    }
-                    self.state.gupax.submenu = SubmenuGupax::Updates;
-                    self.tab = Tab::Settings;
-                    self.update.update_version(
-                        binaries,
-                        self.state.gupax.clone(),
-                        self.binaries_version.clone(),
-                        self.restart.clone(),
-                    );
-                } else {
-                    self.state.gupax.updates.ask_download_start = false;
-                }
             }
         }
     }

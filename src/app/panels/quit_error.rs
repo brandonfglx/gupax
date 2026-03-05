@@ -17,8 +17,10 @@
 
 use std::process::exit;
 
+use crate::app::Tab;
 use crate::app::eframe_impl::ProcessStateGui;
 use crate::app::keys::KeyPressed;
+use crate::app::submenu_enum::SubmenuGupax;
 use crate::disk::node::Node;
 use crate::disk::state::State;
 use crate::helper::Helper;
@@ -175,13 +177,13 @@ impl crate::app::App {
                 };
                 let height = ui.available_height();
 
-                match &self.error_state.buttons {
+                match self.error_state.buttons.clone() {
                     UseDetectedLocalNode((rpc, zmq)) => {
                         if ui
                             .add_sized([width, height / 2.0], Button::new("Use the detected Node"))
                             .clicked()
                         {
-                            *self.helper.lock().unwrap().ports_detected_local_node.lock().unwrap() = Some((*rpc, *zmq));
+                            *self.helper.lock().unwrap().ports_detected_local_node.lock().unwrap() = Some((rpc, zmq));
                             self.error_state.reset();
                                 Helper::start_node(
                                 &self.helper,
@@ -353,19 +355,53 @@ impl crate::app::App {
                             exit(1);
                         }
                     }
-                    Confirm(yes, no) => {
+                    WarnUpdate(data) => {
                         if ui
-                            .add_sized([width, height / 2.0], Button::new(yes.clone()))
+                            .add_sized([width, height / 2.0], Button::new(data.yes_button.clone()))
                             .clicked()
                         {
+                            match data.yes_button.as_str() {
+                                "Download missing binaries" => {
+                    self.ask_download_start_acknowledge = true;
+                    self.state.gupax.submenu = SubmenuGupax::Updates;
+                    self.tab = Tab::Settings;
+                    self.update.update_version(
+                        data.name.split(" ").map(|s|s.to_string()).collect(),
+                        self.state.gupax.clone(),
+                        self.binaries_version.clone(),
+                        self.restart.clone(),
+                    );
+                },
+                "Yes downgrade" => {
+                                if self.warn_switch_beta(&data.name.clone()) {
+                self.update.update_version(
+                    vec![data.name.to_string()],
+                    self.state.gupax.clone(),
+                    self.binaries_version.clone(),
+                    self.restart.clone(),
+                );
+                                }
+                            },
+                            "Yes, switch to BETA" => {
+                self.update.update_version(
+                    vec![data.name.to_string()],
+                    self.state.gupax.clone(),
+                    self.binaries_version.clone(),
+                    self.restart.clone(),
+                );
+                            }
+                _ => panic!("unknown button")
+                        };
                             self.error_state.reset();
                         } else if key.is_esc()
                             || ui
-                                .add_sized([width, height / 2.0], Button::new(no.clone()))
+                                .add_sized([width, height / 2.0], Button::new(data.no_button.clone()))
                                 .clicked()
                         {
+                            if data.yes_button == "Download missing binaries" {
+                    self.state.gupax.updates.ask_download_start = false;
+                }
                             self.error_state.reset();
-                            self.error_state.msg = "Canceled".to_string();
                         }
                     }
                 }

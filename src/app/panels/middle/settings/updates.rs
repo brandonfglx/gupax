@@ -10,7 +10,7 @@ use crate::{
     miscs::height_txt_before_button,
     utils::{
         constants::SPACE,
-        errors::{ErrorButtons, ErrorFerris},
+        errors::{ErrorButtons, ErrorFerris, WarnUpdateData},
     },
 };
 
@@ -94,14 +94,13 @@ impl App {
         });
     }
     fn warn_downgrade(&mut self, name: &str) -> bool {
-        // TODO: warn if selected version is a downgrade from current version
         let selected_numeric_version: String = self
             .state
             .gupax
             .updates
             .selected_version_by_name(name)
             .chars()
-            .take_while(|c| c.is_ascii_digit())
+            .filter(|c| c.is_ascii_digit())
             .collect::<Vec<_>>()
             .into_iter()
             .collect();
@@ -109,7 +108,7 @@ impl App {
             .binaries_version
             .version_by_name(name)
             .chars()
-            .take_while(|c| c.is_ascii_digit())
+            .filter(|c| c.is_ascii_digit())
             .collect::<Vec<_>>()
             .into_iter()
             .collect();
@@ -126,20 +125,18 @@ impl App {
 
             self.error_state.set(
                 msg,
-                ErrorFerris::Panic,
-                ErrorButtons::Confirm(
-                    "Yes downgrade".to_string(),
-                    "No Abort the downgrade".to_string(),
-                ),
+                ErrorFerris::Oops,
+                ErrorButtons::WarnUpdate(WarnUpdateData {
+                    yes_button: "Yes downgrade".to_string(),
+                    no_button: "No Abort the downgrade".to_string(),
+                    name: name.to_string(),
+                }),
             );
-            if self.error_state.msg == "Canceled" {
-                self.error_state.msg = "".to_string();
-                return false;
-            }
+            return false;
         }
         true
     }
-    fn warn_switch_beta(&mut self, name: &str) -> bool {
+    pub fn warn_switch_beta(&mut self, name: &str) -> bool {
         if !self.binaries_version.version_by_name(name).contains("BETA")
             && self
                 .state
@@ -153,15 +150,13 @@ impl App {
             self.error_state.set(
                 msg,
                 ErrorFerris::Panic,
-                ErrorButtons::Confirm(
-                    "Yes, switch to BETA".to_string(),
-                    "No, stay in STABLE releases".to_string(),
-                ),
+                ErrorButtons::WarnUpdate(WarnUpdateData {
+                    yes_button: "Yes, switch to BETA".to_string(),
+                    no_button: "No, stay in STABLE releases".to_string(),
+                    name: name.to_string(),
+                }),
             );
-            if self.error_state.msg == "Canceled" {
-                self.error_state.msg = "".to_string();
-                return false;
-            }
+            return false;
         }
         true
     }
@@ -176,12 +171,6 @@ impl App {
                  let updating = self.update.lock().unwrap().updating;
         ui.add_enabled_ui(!updating, |ui|{
         if ui.button("Update Everything").on_hover_text("Update all binaries to the latest release").clicked() {
-            for name in BINARIES_NAME {
-                if !(self.warn_downgrade(name) && self.warn_switch_beta(name))
-                {
-                    return;
-                }
-            }
             self.update
                 .update_all(self.state.gupax.clone(), self.binaries_version.clone(), self.restart.clone());
         }

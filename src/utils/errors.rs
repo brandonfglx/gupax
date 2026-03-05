@@ -12,7 +12,13 @@ pub enum ErrorButtons {
     Quit,
     WindowsAdmin,
     Debug,
-    Confirm(String, String),
+    WarnUpdate(WarnUpdateData),
+}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct WarnUpdateData {
+    pub yes_button: String,
+    pub no_button: String,
+    pub name: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

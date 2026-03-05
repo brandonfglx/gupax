@@ -297,7 +297,6 @@ impl Update {
                 url = url.replace("github.com", "api.github.com/repos");
                 url.push_str("/releases");
             }
-            dbg!(&url);
             let updated_versions = client
                 .get(url)
                 .send()
@@ -305,7 +304,6 @@ impl Update {
                 .error_for_status()?
                 .json::<Vec<Release>>()
                 .await?;
-            dbg!(&updated_versions);
 
             if let Some(v) = updated_versions.first()
                 && v.tag_name != binaries_version.version_by_name(name)
@@ -361,7 +359,6 @@ impl Update {
         let part_progress = 100.0 / binaries.len() as f32;
         self.lock().unwrap().prog = 0.0;
         for name in binaries {
-            dbg!(&name);
             let source = gupax_settings.updates.source_by_name(name);
             let selected_version = gupax_settings.updates.selected_version_by_name(name);
             let current_version = binaries_version.version_by_name(name);
@@ -403,11 +400,9 @@ impl Update {
                     std::fs::rename(binary_path, tmp_windows).unwrap();
                 }
             }
-            dbg!(&extension);
             match extension.as_str() {
                 #[cfg(target_family = "unix")]
                 "bz2" => {
-                    dbg!(&binary_path);
                     let mut archive =
                         tar::Archive::new(bzip2_rs::DecoderReader::new(bytes.as_ref()));
                     archive
@@ -419,7 +414,6 @@ impl Update {
                             if let Some(filename) = path.file_name()
                                 && filename == name.as_str()
                             {
-                                dbg!(&filename);
                                 return true;
                             }
                             false
@@ -431,11 +425,9 @@ impl Update {
                 }
                 #[cfg(target_family = "unix")]
                 "gz" => {
-                    dbg!(&binary_path);
                     let mut archive = tar::Archive::new(GzDecoder::new(bytes.as_ref()));
                     for mut entry in archive.entries().unwrap().filter_map(|e| e.ok()) {
                         if entry.path().unwrap().ends_with(name) {
-                            dbg!(&entry.path());
                             entry.unpack(binary_path).unwrap();
                         }
                     }
@@ -534,7 +526,6 @@ impl Update {
             _ => panic!("unknown name"),
         };
         let extension = url.split('.').next_back().unwrap();
-        dbg!(&url);
         let bytes = client
             .get(&url)
             .send()

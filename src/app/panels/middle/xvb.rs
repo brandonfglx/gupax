@@ -110,7 +110,6 @@ impl crate::disk::state::Xvb {
                         .show_ui(ui, |ui| {
                                 if ui.selectable_value(&mut self.mode, XvbModeChoice::Auto,
                                      XvbModeChoice::Auto.to_string()).clicked() {
-                                     dbg!(&self.mode);
                 api.lock().unwrap().runtime_mode = XvbMode::from(&*self);
                                  }
                                 if ui.selectable_value(&mut self.mode, XvbModeChoice::Hero,

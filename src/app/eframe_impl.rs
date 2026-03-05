@@ -211,12 +211,10 @@ impl App {
     /// Will not ask if every path of binaries exist or if he checked the "do not check next time".
     pub fn ask_download_binaries(&mut self) {
         if !self.ask_download_start_acknowledge && self.state.gupax.updates.ask_download_start {
-            dbg!(&self.state.gupax.updates.ask_download_start);
             let p2pool_exist = self.state.gupax.absolute_p2pool_path.is_file();
             let node_exist = self.state.gupax.absolute_node_path.is_file();
             let xmrig_exist = self.state.gupax.absolute_xmrig_path.is_file();
             let xp_exist = self.state.gupax.absolute_xp_path.is_file();
-            dbg!(&self.state.gupax.absolute_node_path);
             if !p2pool_exist || !node_exist || !xmrig_exist || !xp_exist {
                 let msg = format!(
                     "Gupax is missing the binary of:\n{}\n{}\n{}\n{}\n\nDo you want it to download them now ?",

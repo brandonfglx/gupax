@@ -361,7 +361,7 @@ impl Update {
             let selected_version = gupax_settings.updates.selected_version_by_name(name);
             let current_version = binaries_version.version_by_name(name);
             let binary_path = if name == "gupax" {
-                &std::env::current_exe().unwrap()
+                &std::env::current_exe()?
             } else {
                 gupax_settings.path_by_name(name)
             };
@@ -393,10 +393,10 @@ impl Update {
             #[cfg(target_os = "windows")]
             {
                 if binary_path.exists() {
-                    let tmp_dir = Self::get_tmp_dir().unwrap();
-                    create_dir_all(&tmp_dir).unwrap();
+                    let tmp_dir = Self::get_tmp_dir()?;
+                    create_dir_all(&tmp_dir)?;
                     let tmp_windows = tmp_dir + &format!("{name}.exe");
-                    std::fs::rename(binary_path, tmp_windows).unwrap();
+                    std::fs::rename(binary_path, tmp_windows)?;
                 }
             }
             match extension.as_str() {
@@ -405,8 +405,7 @@ impl Update {
                     let mut archive =
                         tar::Archive::new(bzip2_rs::DecoderReader::new(bytes.as_ref()));
                     archive
-                        .entries()
-                        .unwrap()
+                        .entries()?
                         .into_iter()
                         .find(|entry| {
                             let path = entry.as_ref().unwrap().path().unwrap();
@@ -417,17 +416,15 @@ impl Update {
                             }
                             false
                         })
-                        .unwrap()
-                        .unwrap()
-                        .unpack(binary_path)
-                        .unwrap();
+                        .unwrap()?
+                        .unpack(binary_path)?;
                 }
                 #[cfg(target_family = "unix")]
                 "gz" => {
                     let mut archive = tar::Archive::new(GzDecoder::new(bytes.as_ref()));
                     for mut entry in archive.entries().unwrap().filter_map(|e| e.ok()) {
-                        if entry.path().unwrap().ends_with(name) {
-                            entry.unpack(binary_path).unwrap();
+                        if entry.path()?.ends_with(name) {
+                            entry.unpack(binary_path)?;
                         }
                     }
                 }

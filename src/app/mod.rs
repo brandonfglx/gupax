@@ -127,7 +127,7 @@ pub struct App {
     // Restart state:
     // If Gupax updated itself, this represents that the
     // user should (but isn't required to) restart Gupax.
-    pub restart: Arc<Mutex<Restart>>,
+    pub restart: Arc<Mutex<bool>>,
     // Error State:
     // These values are essentially global variables that
     // indicate if an error message needs to be displayed
@@ -368,7 +368,7 @@ impl App {
             node_vec: Node::new_vec(),
             og_pool_vec: Pool::new_vec(),
             pool_vec: Pool::new_vec(),
-            restart: arc_mut!(Restart::No),
+            restart: arc_mut!(false),
             diff: false,
             error_state: ErrorState::new(),
             helper: arc_mut!(Helper::new(
@@ -989,12 +989,6 @@ impl Tab {
             .for_each(|p| tabs.push(Tab::from_process_name(p)));
         tabs
     }
-}
-//---------------------------------------------------------------------------------------------------- [Restart] Enum
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Restart {
-    No,  // We don't need to restart
-    Yes, // We updated, user should probably (but isn't required to) restart
 }
 //---------------------------------------------------------------------------------------------------- CPU Benchmarks.
 #[derive(Debug, Serialize, Deserialize)]

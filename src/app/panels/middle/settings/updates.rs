@@ -1,4 +1,6 @@
-use egui::{ComboBox, Label, ProgressBar, RichText, ScrollArea, TextStyle, Ui};
+use egui::{
+    Checkbox, ComboBox, Label, ProgressBar, RichText, ScrollArea, Separator, TextStyle, Ui,
+};
 use egui_commonmark::CommonMarkViewer;
 use log::warn;
 
@@ -22,9 +24,14 @@ impl App {
                 });
             return;
         }
-        ScrollArea::vertical().show(ui, |ui| {
-            self.update_all_widget(ui);
+        ScrollArea::both().show(ui, |ui| {
             self.update_progress(ui);
+            ui.horizontal(|ui| {
+                self.update_all_widget(ui);
+                ui.group(|ui|{
+                self.horizontal_flex_button_update(ui);
+                });
+            });
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     for name in BINARIES_NAME {
@@ -152,11 +159,16 @@ impl App {
         true
     }
     fn update_all_widget(&mut self, ui: &mut Ui) {
+        ui.add_space(SPACE * 0.9);
+        ui.group(|ui|{
+            
+            ui.vertical(|ui|{
         ui.add_space(SPACE);
         ui.horizontal(|ui|{
             ui.vertical(|ui|{
-                ui.add_space(SPACE / 2.0);
-                let updating = self.update.lock().unwrap().updating;
+                
+        ui.add_space(SPACE * 0.5);
+                 let updating = self.update.lock().unwrap().updating;
         ui.add_enabled_ui(!updating, |ui|{
         if ui.button("Update Everything").on_hover_text("Update all binaries to the latest release").clicked() {
             for name in BINARIES_NAME {
@@ -166,13 +178,23 @@ impl App {
                 }
             }
             self.update
-                .update_all(self.state.gupax.clone(), self.binaries_version.clone());
+                .update_all(self.state.gupax.clone(), self.binaries_version.clone(), self.restart.clone());
         }
         });
             });
-        ui.checkbox(&mut self.state.gupax.updates.beta, "Beta").on_hover_text("Participate in pre-release. Check only if you want to test release to come before they are stabilized. You will experience bugs.");
+        ui.add_space(SPACE );
+        ui.checkbox(&mut self.state.gupax.updates.beta, "Beta").on_hover_text("Participate in pre-release. Check only if you want to test release to come before they are stabilized. You will experience bugs.");           
+        
         });
-    }
+        ui.add_space(SPACE * 0.5);
+            });
+        });
+
+        }
+                
+            
+        
+    
     fn binary_update_settings_widget(&mut self, ui: &mut Ui, name: &str) {
         ui.group(|ui| {
             ui.set_min_width((ui.available_width() / 2.0) - SPACE);
@@ -228,6 +250,7 @@ impl App {
                     vec![name.to_string()],
                     self.state.gupax.clone(),
                     self.binaries_version.clone(),
+                    self.restart.clone()
                 );
             }
         });
@@ -273,6 +296,57 @@ impl App {
             Label::new("repository:     "),
         );
         ui.text_edit_singleline(repo).on_hover_text("repository from where the binary will be downloaded. Only github compatible API with specific name convention in releases for binaries are supported.\nExample: github.com/gupax-io/gupax");
+        });
+    }
+
+    pub fn horizontal_flex_button_update(&mut self, ui: &mut Ui) {
+        let notification_button = (
+            Checkbox::new(
+                &mut self.state.gupax.updates.notification_update,
+                "Notification for new updates",
+            ),
+            "Checks for new updates every 24 hours and at each restart.\nDoes not apply them.\nRestart Gupax to apply changes.",
+        );
+        let auto_update_button = (
+            Checkbox::new(
+                &mut self.state.gupax.updates.automatic_update,
+                "Automatic updates",
+            ),
+            "Apply for new updates automatically. It is done every 24h and at each restart\nRestart Gupax to apply changes.",
+        );
+        let auto_restart_button = (
+            Checkbox::new(
+                &mut self.state.gupax.updates.automatic_restart,
+                "Automatic restart",
+            ),
+            "Gupax will be restarted at the end of an update.\nRestart Gupax to apply changes.",
+        );
+        let widgets = vec![notification_button, auto_update_button, auto_restart_button];
+       let text_style = TextStyle::Button;
+        ui.style_mut().override_text_style = Some(text_style);
+        let spacing = 2.0;
+        ScrollArea::horizontal().show(ui, |ui| {
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                let width = (((ui.available_width()) / widgets.len() as f32)
+                    - ((ui.style().spacing.item_spacing.x * 2.0) + spacing))
+                    .max(0.0);
+                let size = [width, 0.0];
+                let len = widgets.iter().len();
+                for (count, (widget, hover)) in widgets.into_iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            ui.horizontal(|ui| {
+                                ui.add_sized(size, widget).on_hover_text(hover);
+                            });
+                            // add a space to prevent selectable button to be at the same line as the end of the top bar. Make it the same spacing as separators.
+                            ui.add_space(spacing * 4.0);
+                        });
+                        if count + 1 != len {
+                            ui.add(Separator::default().spacing(spacing).vertical());
+                        }
+                    });
+                }
+            });
         });
     }
 }

@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use derive_more::Display;
 use rand::{RngExt, distr::Alphanumeric, rng};
 use strum::{EnumCount, EnumIter, IntoEnumIterator};
@@ -264,8 +262,8 @@ pub struct UpdateSettings {
     pub xmrig_source: String,
     pub proxy_version: String,
     pub proxy_source: String,
-    pub check_version_frequency: Duration,
     pub ask_download_start: bool,
+    pub notification_update: bool,
     pub automatic_update: bool,
     pub automatic_restart: bool,
     pub beta: bool,
@@ -327,8 +325,8 @@ impl Default for UpdateSettings {
             xmrig_source: "https://api.github.com/repos/xmrig/xmrig/releases".to_owned(),
             proxy_version: "v6.24.0".to_owned(),
             proxy_source: "https://api.github.com/repos/xmrig/xmrig-proxy/releases".to_owned(),
-            check_version_frequency: Duration::from_hours(12),
             ask_download_start: true,
+            notification_update: true,
             automatic_update: false,
             automatic_restart: false,
             beta: false,

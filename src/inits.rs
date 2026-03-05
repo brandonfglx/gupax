@@ -1,5 +1,5 @@
 use crate::app::App;
-use crate::components::update::check_binary_path;
+use crate::components::update::{BINARIES_NAME, check_binary_path};
 use crate::helper::crawler::Crawler;
 use crate::helper::{Helper, ProcessName};
 use crate::utils::constants::{
@@ -7,6 +7,7 @@ use crate::utils::constants::{
 };
 use crate::utils::regex::Regexes;
 use std::io::Write;
+use std::thread;
 //---------------------------------------------------------------------------------------------------- Init functions
 use crate::disk::state::*;
 use crate::{components::node::Ping, miscs::clamp_scale};
@@ -20,7 +21,7 @@ use env_logger::{Builder, WriteStyle};
 use flexi_logger::{FileSpec, Logger};
 use log::LevelFilter;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 #[cold]
 #[inline(never)]
@@ -321,4 +322,41 @@ pub fn init_auto(app: &mut App) {
     }
     // [Notifications Service]
     Helper::start_notifications(&app.helper);
+
+    // Notification/refresh of updates is also triggered by automatic updates
+    if app.state.gupax.updates.notification_update && !app.state.gupax.updates.automatic_update {
+        let binaries = BINARIES_NAME
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
+        let gupax_settings = app.state.gupax.clone();
+        let binaries_version = app.binaries_version.clone();
+        let update = app.update.clone();
+        thread::spawn(move || {
+            loop {
+                update.refresh_versions(
+                    binaries.clone(),
+                    gupax_settings.clone(),
+                    binaries_version.clone(),
+                );
+                thread::sleep(Duration::from_hours(24));
+            }
+        });
+    }
+    if app.state.gupax.updates.automatic_update {
+        let gupax_settings = app.state.gupax.clone();
+        let binaries_version = app.binaries_version.clone();
+        let update = app.update.clone();
+        let restart = app.restart.clone();
+        thread::spawn(move || {
+            loop {
+                update.update_all(
+                    gupax_settings.clone(),
+                    binaries_version.clone(),
+                    restart.clone(),
+                );
+                thread::sleep(Duration::from_hours(24));
+            }
+        });
+    }
 }

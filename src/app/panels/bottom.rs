@@ -1,8 +1,8 @@
 use std::sync::{Arc, OnceLock};
 
 use crate::app::eframe_impl::{ProcessStateGui, ProcessStatesGui};
+use crate::app::keys::KeyPressed;
 use crate::app::submenu_enum::{Submenu, SubmenuGupax, SubmenuP2pool, SubmenuStatus};
-use crate::app::{Restart, keys::KeyPressed};
 use crate::disk::node::Node;
 use crate::disk::pool::Pool;
 use crate::disk::state::{Gupax, GupaxTheme, State};
@@ -120,15 +120,15 @@ impl crate::app::App {
 
     fn version(&self, ui: &mut Ui, height: f32) {
         // ui.add_space(space);
-        match *self.restart.lock().unwrap() {
-            Restart::Yes => ui
-                .add_sized(
-                    [0.0, height],
-                    Label::new(RichText::new(&self.name_version).color(YELLOW)),
-                )
-                .on_hover_text(GUPAX_SHOULD_RESTART),
-            _ => ui.add_sized([0.0, height], Label::new(&self.name_version)),
-        };
+        if *self.restart.lock().unwrap() {
+            ui.add_sized(
+                [0.0, height],
+                Label::new(RichText::new(&self.name_version).color(YELLOW)),
+            )
+            .on_hover_text(GUPAX_SHOULD_RESTART);
+        } else {
+            ui.add_sized([0.0, height], Label::new(&self.name_version));
+        }
     }
     fn theme_show(&mut self, ui: &mut Ui, ctx: &egui::Context) {
         let icon = match self.state.gupax.theme {

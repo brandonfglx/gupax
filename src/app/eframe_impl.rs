@@ -249,13 +249,13 @@ impl App {
                     if !xp_exist {
                         binaries.push("xmrig-proxy".to_string());
                     }
-                    dbg!(&binaries);
                     self.state.gupax.submenu = SubmenuGupax::Updates;
                     self.tab = Tab::Settings;
                     self.update.update_version(
                         binaries,
                         self.state.gupax.clone(),
                         self.binaries_version.clone(),
+                        self.restart.clone(),
                     );
                 } else {
                     self.state.gupax.updates.ask_download_start = false;

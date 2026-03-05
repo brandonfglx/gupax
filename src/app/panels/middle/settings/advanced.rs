@@ -4,7 +4,7 @@ use strum::{EnumCount, IntoEnumIterator};
 
 use crate::{
     app::{
-        App, Restart, Tab,
+        App, Tab,
         panels::middle::{
             common::{state_edit_field::slider_state_field, toggle::toggle_ui_compact},
             settings::path_binary,
@@ -258,7 +258,7 @@ impl App {
                     .on_hover_text("Disabled: WGPU\nEnabled: GLOW")
                     .clicked()
                 {
-                    *self.restart.lock().unwrap() = Restart::Yes
+                    *self.restart.lock().unwrap() = true
                 }
             });
         });

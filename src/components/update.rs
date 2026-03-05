@@ -39,7 +39,7 @@ use log::*;
 use regex::Regex;
 use reqwest::{Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, fs::create_dir_all, path::Path, thread};
+use std::{fmt::Display, fs::create_dir_all, path::Path, process::exit, thread};
 use std::{
     process::Command,
     sync::{Arc, Mutex},
@@ -150,7 +150,12 @@ impl Update {
             *version = latest.to_string();
         }
     }
-    pub fn update_all(&self, mut gupax_settings: Gupax, binaries_version: BinariesVersion) {
+    pub fn update_all(
+        &self,
+        mut gupax_settings: Gupax,
+        binaries_version: BinariesVersion,
+        restart: Arc<Mutex<bool>>,
+    ) {
         let update = self.clone();
         thread::spawn(move || {
             update.lock().unwrap().updating = true;
@@ -191,9 +196,24 @@ impl Update {
             );
             if update.is_update_available(&binaries_version) {
                 match update.spawn_update_versions(&binaries, &gupax_settings, &binaries_version) {
-                    Ok(_) => notif(
-                        "Binaries have been updated, you need to restart Gupax to apply the change",
-                    ),
+                    Ok(_) => {
+                        if !update.lock().unwrap().msg.contains("already up to date") {
+                            if !gupax_settings.updates.automatic_restart {
+                                notif(
+                                    "A binary has been updated, you need to restart Gupax to apply the change",
+                                );
+                                *restart.lock().unwrap() = true;
+                            } else {
+                                warn!("Restarting Gupax after upgrading !");
+                                let gupax_path = std::env::current_exe().unwrap();
+                                let gupax_args = std::env::args();
+                                let mut cmd = Command::new(gupax_path);
+                                cmd.args(gupax_args);
+                                cmd.spawn().unwrap();
+                                exit(0)
+                            }
+                        }
+                    }
                     Err(e) => {
                         update.lock().unwrap().msg = format!("Update failed: {:?}", e);
                         notif(&format!("{:?}", e));
@@ -307,14 +327,20 @@ impl Update {
         binaries: Vec<String>,
         gupax_settings: Gupax,
         binaries_version: BinariesVersion,
+        restart: Arc<Mutex<bool>>,
     ) {
         let update = self.clone();
         thread::spawn(move || {
             update.lock().unwrap().updating = true;
             match update.spawn_update_versions(&binaries, &gupax_settings, &binaries_version) {
-                Ok(_) => notif(
-                    "A binary has been updated, you need to restart Gupax to apply the change",
-                ),
+                Ok(_) => {
+                    if !update.lock().unwrap().msg.contains("already up to date") {
+                        notif(
+                            "A binary has been updated, you need to restart Gupax to apply the change",
+                        );
+                        *restart.lock().unwrap() = true;
+                    }
+                }
                 Err(e) => {
                     update.lock().unwrap().msg = format!("Update failed: {:?}", e);
                     notif(&format!("{:?}", e))

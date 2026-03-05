@@ -21,7 +21,6 @@ trap 'int' INT
 title "Basic checks"
 # Check for needed files
 [[ -d skel ]]; check "skel"
-[[ -f skel/CHANGELOG.md ]]; check "skel/CHANGELOG.md"
 [[ $1 = v* ]]; check "\$1 ... $1"
 NEW_VER="$1"
 cd skel; check "CD into skel"
@@ -84,7 +83,6 @@ gpg --verify SHA256SUMS; check "Verify GPG"
 # Get changelog + SHA256SUMS into clipboard
 title "Clipboard"
 clipboard() {
-	grep -B999 -m1 "^$" CHANGELOG.md
 	echo "## SHA256SUM & [PGP Signature](https://github.com/cyrix126/gupax/blob/main/pgp/cyrix126.asc)"
 	echo '```'
 	cat SHA256SUMS

@@ -50,22 +50,14 @@ jobs:
           cargo bundle --release --target aarch64-apple-darwin
           mv target/x86_64-apple-darwin/release/bundle/osx/Gupaxx.app Gupaxx-macos-x64.app
           mv target/aarch64-apple-darwin/release/bundle/osx/Gupaxx.app Gupaxx-macos-arm64.app
-          cargo bundle --release  --target x86_64-apple-darwin --features=bundle
-          cargo bundle --release --target aarch64-apple-darwin --features=bundle
-          mv target/x86_64-apple-darwin/release/bundle/osx/Gupaxx.app Gupaxx-macos-x64.app_b
-          mv target/aarch64-apple-darwin/release/bundle/osx/Gupaxx.app Gupaxx-macos-arm64.app_b
-          tar -cf macos.tar Gupaxx-macos-arm64.app Gupaxx-macos-x64.app Gupaxx-macos-arm64.app_b Gupaxx-macos-x64.app_b
+          tar -cf macos.tar Gupaxx-macos-arm64.app Gupaxx-macos-x64.app
         elif [ "$RUNNER_OS" == "Linux" ]; then
           cargo build --release --target x86_64-unknown-linux-gnu
           mv target/x86_64-unknown-linux-gnu/release/gupax .
-          cargo build --release --target x86_64-unknown-linux-gnu --features=bundle
-          mv target/x86_64-unknown-linux-gnu/release/gupax gupax_b
-          tar -cf linux.tar gupax gupax_b
+          tar -cf linux.tar gupax 
           cargo build --release --target x86_64-pc-windows-gnu
           mv target/x86_64-pc-windows-gnu/release/gupax.exe .
-          cargo build --release --target x86_64-pc-windows-gnu --features=bundle
-          mv target/x86_64-pc-windows-gnu/release/gupax.exe gupax_b.exe
-          tar -cf windows.tar gupax.exe gupax_b.exe
+          tar -cf windows.tar gupax.exe
         fi
       shell: bash
 

@@ -441,8 +441,16 @@ impl Update {
                             && (file_name.eq_ignore_ascii_case(&format!("{name}.exe"))
                                 || (name == "xmrig" && file_name.eq("WinRing0x64.sys")))
                         {
-                            let mut out = File::create(binary_path)?;
-                            std::io::copy(&mut entry, &mut out)?;
+                            if file_name.eq("WinRing0x64.sys") {
+                                let mut path = binary_path.parent().unwrap().to_path_buf();
+                                path.push("WinRing0x64.sys");
+
+                                let mut out = File::create(path)?;
+                                std::io::copy(&mut entry, &mut out)?;
+                            } else {
+                                let mut out = File::create(binary_path)?;
+                                std::io::copy(&mut entry, &mut out)?;
+                            }
                         }
                     }
                 }

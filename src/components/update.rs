@@ -566,7 +566,7 @@ impl Update {
     // So, uses the [Gupax] binary directory as a base, something like [/home/hinto/gupax/gupax_update_SG4xsDdVmr]
     // Rename must be used on the same filesystem, but temp_dir could use a different filesystem than gupax.
     #[cfg(target_os = "windows")]
-    pub fn get_tmp_dir() -> Result<String, anyhow::Error> {
+    pub fn get_tmp_dir() -> Result<String, std::io::Error> {
         use rand::{RngExt, distr::Alphanumeric, rng};
         let rand_string: String = rng()
             .sample_iter(&Alphanumeric)

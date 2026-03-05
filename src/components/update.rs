@@ -436,11 +436,13 @@ impl Update {
                         let mut entry = archive.by_index(i)?;
                         let file = entry.name();
 
-                        if Path::new(file).file_name().and_then(|n| n.to_str())
-                            == Some(&format!("{name}.exe"))
+                        if let Some(file_name) =
+                            Path::new(file).file_name().and_then(|n| n.to_str())
                         {
-                            let mut out = File::create(binary_path)?;
-                            std::io::copy(&mut entry, &mut out)?;
+                            if file_name.eq_ignore_ascii_case(&format!("{name}.exe")) {
+                                let mut out = File::create(binary_path)?;
+                                std::io::copy(&mut entry, &mut out)?;
+                            }
                         }
                     }
                 }

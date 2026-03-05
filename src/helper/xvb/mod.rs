@@ -236,11 +236,37 @@ impl Helper {
         // spawn a task to keep the values updated, looking at hr and pool direction.
 
         info!("XvB | Entering Process mode... ");
+        if process.lock().unwrap().state == ProcessState::NotMining {
+            output_console(
+                &mut gui_api.lock().unwrap().output,
+                "Gupax will register your address on xmrvsbeast.com as soon as you have a P2Pool share",
+                ProcessName::Xvb,
+            );
+        }
         loop {
             debug!("XvB Watchdog | ----------- Start of loop -----------");
             // Set timer of loop
             let start_loop = std::time::Instant::now();
             {
+                if process.lock().unwrap().state == ProcessState::NotMining {
+                    // no address registered.
+                    // Waiting for shares on P2Pool
+                    //
+                    if gui_api_p2pool.lock().unwrap().sidechain_shares > 0 {
+                        let url = format!(
+                            "https://xmrvsbeast.com/cgi-bin/p2pool_bonus_submit_api.cgi?address={}",
+                            state_p2pool.address
+                        );
+                        if client.get(url).send().await.is_ok() {
+                            process.lock().unwrap().state = ProcessState::Middle;
+                        }
+                        first_loop = true;
+                        continue;
+                    }
+                    // once a share is live, register address with api
+                    sleep_end_loop(start_loop, ProcessName::Xvb).await;
+                    continue;
+                }
                 // check if first loop the state of Xmrig-Proxy
                 if first_loop {
                     xp_alive = process_xp.lock().unwrap().state == ProcessState::Alive;
@@ -267,6 +293,7 @@ impl Helper {
                 )
                 .await
                 {
+                    sleep_end_loop(start_loop, ProcessName::Xvb).await;
                     continue;
                 }
                 // check signal

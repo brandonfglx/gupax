@@ -248,5 +248,7 @@ impl App {
                 );
             }
         }
+        // only check once at start
+        self.ask_download_start_acknowledge = false;
     }
 }

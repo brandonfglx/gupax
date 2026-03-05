@@ -438,7 +438,8 @@ impl Update {
 
                         if let Some(file_name) =
                             Path::new(file).file_name().and_then(|n| n.to_str())
-                            && file_name.eq_ignore_ascii_case(&format!("{name}.exe"))
+                            && (file_name.eq_ignore_ascii_case(&format!("{name}.exe"))
+                                || (name == "xmrig" && file_name.eq("WinRing0x64.sys")))
                         {
                             let mut out = File::create(binary_path)?;
                             std::io::copy(&mut entry, &mut out)?;

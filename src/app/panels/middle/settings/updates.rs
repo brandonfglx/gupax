@@ -1,4 +1,5 @@
-use egui::{ComboBox, Label, ProgressBar, ScrollArea, TextStyle, Ui};
+use egui::{ComboBox, Label, ProgressBar, RichText, ScrollArea, TextStyle, Ui};
+use egui_commonmark::CommonMarkViewer;
 use log::warn;
 
 use crate::{
@@ -24,83 +25,41 @@ impl App {
         ScrollArea::vertical().show(ui, |ui| {
             self.update_all_widget(ui);
             self.update_progress(ui);
-            for name in BINARIES_NAME {
-                self.binary_update_settings_widget(ui, name);
-            }
+            ui.horizontal(|ui| {
+                ui.vertical(|ui| {
+                    for name in BINARIES_NAME {
+                        self.binary_update_settings_widget(ui, name);
+                    }
+                });
+                self.view_changelog(ui);
+            });
         });
-        // Update button + Progress bar
-        // debug!("Gupax Tab | Rendering [Update] button + progress bar");
-        //
-        //
-        // automatic updates (frequency)
-        // notification for new update
-        // automatic restart after automatic update
-        // let height_font = ui.text_style_height(&TextStyle::Body);
-        // egui::ScrollArea::vertical().show(ui, |ui| {
-        //     ui.style_mut().spacing.item_spacing = [height_font, height_font].into();
-        //     ui.group(|ui| {
-        //         let updating = self.update.lock().unwrap().updating;
-        //         ui.vertical_centered(|ui| {
-        //             ui.add_space(height_font);
-        //             ui.style_mut().spacing.button_padding = ui.style().spacing.button_padding * 3.0;
-        //             // If [Gupax] is being built for a Linux distro,
-        //             // disable built-in updating completely.
-        //             #[cfg(feature = "distro")]
-        //             ui.disable();
-        //             #[cfg(feature = "distro")]
-        //             // ui.add_sized([width, button], Button::new("Updates are disabled"))
-        //             // .on_disabled_hover_text(DISTRO_NO_UPDATE);
-        //             ui.button("Updates are disabled")
-        //                 .on_disabled_hover_text(DISTRO_NO_UPDATE);
-        //             #[cfg(not(feature = "distro"))]
-        //             ui.add_enabled_ui(
-        //                 !updating && *self.restart.lock().unwrap() == Restart::No,
-        //                 |ui| {
-        //                     #[cfg(not(feature = "distro"))]
-        //                     use crate::utils::constants::GUPAX_UPDATE;
+    }
 
-        //                     #[cfg(not(feature = "distro"))]
-        //                     // if ui
-        //                     //     .add_sized([width, button], Button::new("Check for updates"))
-        //                     if ui
-        //                         .button("Check for updates")
-        //                         .on_hover_text(GUPAX_UPDATE)
-        //                         .clicked()
-        //                     {
-        //                         use crate::components::update::Update;
-
-        //                         Update::spawn_thread(
-        //                             &self.og,
-        //                             &self.state.gupax,
-        //                             &self.state_path,
-        //                             &self.update,
-        //                             &mut self.error_state,
-        //                             &self.restart,
-        //                         );
-        //                     }
-        //                 },
-        //             );
-        //             ui.add_enabled_ui(updating, |ui| {
-        //                 let prog = *self.update.lock().unwrap().prog.lock().unwrap();
-        //                 let msg = format!(
-        //                     "{}\n{}{}",
-        //                     *self.update.lock().unwrap().msg.lock().unwrap(),
-        //                     prog,
-        //                     "%"
-        //                 );
-        //                 ui.label(msg);
-        //                 if updating {
-        //                     ui.spinner();
-        //                 } else {
-        //                     ui.label("...");
-        //                 }
-        //                 ui.add(ProgressBar::new(
-        //                     self.update.lock().unwrap().prog.lock().unwrap().round() / 100.0,
-        //                 ));
-        //             });
-        //         });
-        //     });
-        // });
+    fn view_changelog(&mut self, ui: &mut Ui) {
+        ui.group(|ui| {
+            ui.vertical_centered(|ui| {
+                ui.heading("Changelog");
+                if let Some(release) = &self.changelog_selected {
+                    ui.label(
+                        RichText::new(format!(
+                            "{}\n{}\n{}",
+                            release.1,
+                            release.0.tag_name,
+                            release.0.published_at.date_naive(),
+                        ))
+                        .text_style(TextStyle::Button),
+                    );
+                    ScrollArea::vertical().show(ui, |ui| {
+                        CommonMarkViewer::new().show(ui, &mut self.markdown_cache, &release.0.body);
+                    });
+                } else {
+                    ui.label(
+                        "Click on a refresh button and then on a version to see the changelog",
+                    );
+                }
+            });
+        });
     }
     fn update_progress(&mut self, ui: &mut Ui) {
         ui.group(|ui| {
@@ -216,6 +175,7 @@ impl App {
     }
     fn binary_update_settings_widget(&mut self, ui: &mut Ui, name: &str) {
         ui.group(|ui| {
+            ui.set_min_width((ui.available_width() / 2.0) - SPACE);
             ui.heading(name);
             ui.horizontal(|ui| {
                 let version = self.binaries_version.version_by_name(name);
@@ -227,7 +187,8 @@ impl App {
                 self.update_binary_button(ui, name);
             });
             self.list_versions(ui, name);
-            ui.spacing_mut().text_edit_width = ui.available_width() - SPACE;
+            ui.spacing_mut().text_edit_width =
+                ui.available_width() / 2.0 - (ui.text_style_height(&TextStyle::Body) * 10.0);
             self.source_field(ui, name);
         });
     }
@@ -287,12 +248,16 @@ impl App {
                 )
                 .show_ui(ui, |ui| {
                     for release in self.update.lock().unwrap().releases_by_name(name) {
-                        ui.selectable_value(
-                            selected_version,
-                            release.to_string(),
-                            release.tag_name.clone(),
-                        )
-                        .on_hover_text(release.body.clone());
+                        if ui
+                            .selectable_value(
+                                selected_version,
+                                release.to_string(),
+                                release.tag_name.clone(),
+                            )
+                            .clicked()
+                        {
+                            self.changelog_selected = Some((release.clone(), name.to_owned()));
+                        }
                     }
                 });
         }
@@ -302,7 +267,7 @@ impl App {
         ui.horizontal(|ui|{
         ui.add_sized(
             [0.0, height_txt_before_button(ui, &TextStyle::Body)],
-            Label::new("repository"),
+            Label::new("repository:     "),
         );
         ui.text_edit_singleline(repo).on_hover_text("repository from where the binary will be downloaded. Only github compatible API with specific name convention in releases for binaries are supported.\nExample: github.com/gupax-io/gupax");
         });

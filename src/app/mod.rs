@@ -15,6 +15,7 @@ use crate::cli::parse_args;
 use crate::components::gupax::FileWindow;
 use crate::components::node::Ping;
 use crate::components::node::RemoteNodes;
+use crate::components::update::Release;
 use crate::components::update::Update;
 use crate::disk::consts::GUPAX_P2POOL_API_DIRECTORY;
 use crate::disk::consts::NODE_TOML;
@@ -61,6 +62,7 @@ use eframe::Renderer;
 use egui::Context;
 use egui::Vec2;
 use egui::vec2;
+use egui_commonmark::CommonMarkCache;
 use log::debug;
 use log::error;
 use log::info;
@@ -187,6 +189,8 @@ pub struct App {
     #[cfg(target_os = "windows")]
     pub xmrig_outside_warning_acknowledge: bool,
     pub ask_download_start_acknowledge: bool,
+    pub markdown_cache: CommonMarkCache,
+    pub changelog_selected: Option<(Release, String)>,
 }
 #[derive(Clone)]
 pub struct BinariesVersion {
@@ -438,6 +442,8 @@ impl App {
             xmrig_outside_warning_acknowledge: false,
             ask_download_start_acknowledge: false,
             binaries_version: BinariesVersion::default(),
+            markdown_cache: CommonMarkCache::default(),
+            changelog_selected: None,
         };
         //---------------------------------------------------------------------------------------------------- App init data that *could* panic
         info!("App Init | Getting EXE path...");

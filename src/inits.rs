@@ -44,6 +44,8 @@ pub fn init_text_styles(ctx: &egui::Context, pixels_per_point: f32) {
             bar_width: 12.0,
             ..egui::style::ScrollStyle::solid()
         };
+        style.url_in_tooltip = true;
+        style.interaction.selectable_labels = true;
     });
     // Make sure scale f32 is a regular number.
     let pixels_per_point = clamp_scale(pixels_per_point);

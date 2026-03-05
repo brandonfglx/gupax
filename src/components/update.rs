@@ -434,11 +434,18 @@ impl Update {
                 #[cfg(target_os = "windows")]
                 "zip" => {
                     use std::{fs::File, io::Cursor};
-                    let mut archive = zip::ZipArchive::new(Cursor::new(bytes.as_ref())).unwrap();
-                    let mut file = archive.by_name(&format!("{name}.exe")).unwrap();
+                    let mut archive = zip::ZipArchive::new(Cursor::new(bytes.as_ref()))?;
+                    for i in 0..archive.len() {
+                        let mut entry = archive.by_index(i)?;
+                        let file = entry.name();
 
-                    let mut output = File::create(binary_path).unwrap();
-                    std::io::copy(&mut file, &mut output).unwrap();
+                        if Path::new(file).file_name().and_then(|n| n.to_str())
+                            == Some(&format!("{name}.exe"))
+                        {
+                            let mut out = File::create(binary_path)?;
+                            std::io::copy(&mut entry, &mut out)?;
+                        }
+                    }
                 }
                 _ => panic!("unsupported format"),
             };
@@ -622,6 +629,9 @@ pub enum UpdateError {
     PathIsDir(String),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+    #[cfg(target_family = "windows")]
+    #[error(transparent)]
+    ZipArchive(#[from] zip::result::ZipError),
 }
 
 fn restart_gupax() {

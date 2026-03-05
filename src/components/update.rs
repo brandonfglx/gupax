@@ -204,13 +204,7 @@ impl Update {
                                 );
                                 *restart.lock().unwrap() = true;
                             } else {
-                                warn!("Restarting Gupax after upgrading !");
-                                let gupax_path = std::env::current_exe().unwrap();
-                                let gupax_args = std::env::args();
-                                let mut cmd = Command::new(gupax_path);
-                                cmd.args(gupax_args);
-                                cmd.spawn().unwrap();
-                                exit(0)
+                                restart_gupax();
                             }
                         }
                     }
@@ -333,10 +327,14 @@ impl Update {
             match update.spawn_update_versions(&binaries, &gupax_settings, &binaries_version) {
                 Ok(_) => {
                     if !update.lock().unwrap().msg.contains("already up to date") {
-                        notif(
-                            "A binary has been updated, you need to restart Gupax to apply the change",
-                        );
-                        *restart.lock().unwrap() = true;
+                        if !gupax_settings.updates.automatic_restart {
+                            notif(
+                                "A binary has been updated, you need to restart Gupax to apply the change",
+                            );
+                            *restart.lock().unwrap() = true;
+                        } else {
+                            restart_gupax();
+                        }
                     }
                 }
                 Err(e) => {
@@ -623,4 +621,15 @@ pub enum UpdateError {
     PathIsDir(String),
     #[error(transparent)]
     IoError(#[from] std::io::Error),
+}
+
+fn restart_gupax() {
+    warn!("Restarting Gupax after upgrading !");
+    let gupax_path = std::env::current_exe().unwrap();
+    let gupax_args = std::env::args();
+    let args = gupax_args.skip(1).collect::<Vec<String>>();
+    let mut cmd = Command::new(gupax_path);
+    cmd.args(args);
+    cmd.spawn().unwrap();
+    exit(0)
 }

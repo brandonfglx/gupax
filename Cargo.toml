@@ -72,7 +72,7 @@ strip-ansi-escapes = "0.2.1"
 derive_more = {version="2.1.1", default-features=false, features=["display", "deref", "deref_mut"]}
 serde-this-or-that = "0.5.0"
 readable = "0.16"
-chrono = {version="0.4.43", default-features=false, features=["clock", "std"]}
+chrono = {version="0.4", default-features=false, features=["clock", "std", "serde"]}
 enclose = "1.2.1"
 bounded-vec-deque = {version="0.1.1", default-features=false}
 cfg-if = "1.0"

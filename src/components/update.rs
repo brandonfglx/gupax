@@ -286,7 +286,11 @@ impl Update {
                     || versions.is_empty())
             {
                 // there is a new version, send a notification
-                notif(&v.body);
+                notif(&format!(
+                    "New version available for {name}:\n{} published at {}",
+                    v.tag_name,
+                    v.published_at.date_naive()
+                ));
                 *versions = updated_versions;
             }
         }
@@ -564,12 +568,14 @@ impl InnerUpdate {
     }
 }
 
+use chrono::{DateTime, Utc};
+
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Release {
     pub tag_name: String,
     pub prerelease: bool,
     pub body: String,
-    pub published_at: String,
+    pub published_at: DateTime<Utc>,
 }
 
 // TODO: pre-release must be shown as BETA.

@@ -25,7 +25,7 @@ log=[]
 
 [dependencies]
 clap = {version="4.5", features=["cargo", "derive"]}
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 benri = "0.1.12"
 bytes = "1.11.1"
 dirs = "6.0.0"
@@ -63,8 +63,8 @@ serde = { version = "1.0.228", features = ["rc", "derive"] }
 serde_json = "1.0.149"
 sysinfo = { version = "0.38", default-features = false, features=["system"] }
 # tls-api = "0.9.0"
-tokio = { version = "1.49.0", features = ["rt", "time", "macros", "process", "rt-multi-thread"] }
-toml = { version = "1.0.2", features = ["preserve_order"] }
+tokio = { version = "1.50.0", features = ["rt", "time", "macros", "process", "rt-multi-thread"] }
+toml = { version = "1.0.4", features = ["preserve_order"] }
 walkdir = "2.5.0"
 copy_dir = {git="https://github.com/decathorpe/copy_dir", rev="7541d89"}
 zeroize = "1.8.2"
@@ -80,7 +80,7 @@ cfg-if = "1.0"
 flexi_logger = "0.31"
 eframe = {version="0.33", features=["wgpu"]}
 # eframe = {git="https://github.com/emilk/egui", features=["wgpu"]}
-strum = {version="0.27", features=["derive"]}
+strum = {version="0.28", features=["derive"]}
 ## force version of ring to prevent https://rustsec.org/advisories/RUSTSEC-2025-0009
 ring = "0.17.14"
 ## get local ip
@@ -93,7 +93,7 @@ port_check = "0.3"
 monero-crawler-lib = {git="https://github.com/Cyrix126/monero-crawler-rs", features=["rpc", "zmq"]}
 futures = "0.3"
 ## find ports used by a local monerod
-listeners = "0.4"
+listeners = "0.5"
 ## notifications
 notify-rust = "4.12"
 ## handle Ctrl+C for daemon mode
@@ -122,7 +122,7 @@ egui = {version="0.33", features=["callstack"]}
 # Windows dependencies
 [target.'cfg(windows)'.dependencies]
 wgpu = {version = "27.0.1", features=["angle"]}
-zip = "8.0.0"
+zip = "8.2.0"
 windows = "0.62.2"
 is_elevated = "0.1.2"
 elevated-helper = {git="https://github.com/Cyrix126/elevated-helper"}

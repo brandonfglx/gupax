@@ -118,14 +118,12 @@ impl HashrateProvider {
             .client()
             .get(&url_api)
             .header(AUTHORIZATION, &authorization_value);
-        // dbg!(&request);
         let mut config = request.send().await?.json::<Value>().await?;
         // modify node configuration
         let uri = format!("{}:{}", target_pool.url(), target_pool.port());
         info!("replacing {self} config from api url {url_api} config with node {target_pool}");
         let pointer_base = "/pools/0/";
         let pointer_url = [pointer_base, "url"].concat();
-        // dbg!(&config);
         *config
             .pointer_mut(&pointer_url)
             .ok_or_else(|| WorkerError::MissingField(pointer_url))? = uri.into();

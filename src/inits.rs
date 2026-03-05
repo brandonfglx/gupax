@@ -1,7 +1,5 @@
 use crate::app::App;
-#[cfg(not(feature = "distro"))]
-use crate::components::update::Update;
-use crate::components::update::check_binary_path;
+use crate::components::update::{BINARIES_NAME, check_binary_path};
 use crate::helper::crawler::Crawler;
 use crate::helper::{Helper, ProcessName};
 use crate::utils::constants::{
@@ -9,6 +7,7 @@ use crate::utils::constants::{
 };
 use crate::utils::regex::Regexes;
 use std::io::Write;
+use std::thread;
 //---------------------------------------------------------------------------------------------------- Init functions
 use crate::disk::state::*;
 use crate::{components::node::Ping, miscs::clamp_scale};
@@ -22,7 +21,7 @@ use env_logger::{Builder, WriteStyle};
 use flexi_logger::{FileSpec, Logger};
 use log::LevelFilter;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 #[cold]
 #[inline(never)]
@@ -46,6 +45,8 @@ pub fn init_text_styles(ctx: &egui::Context, pixels_per_point: f32) {
             bar_width: 12.0,
             ..egui::style::ScrollStyle::solid()
         };
+        style.url_in_tooltip = true;
+        style.interaction.selectable_labels = true;
     });
     // Make sure scale f32 is a regular number.
     let pixels_per_point = clamp_scale(pixels_per_point);
@@ -138,19 +139,19 @@ pub fn init_auto(app: &mut App) {
         .expect("could not get the current path");
 
     // [Auto-Update]
-    #[cfg(not(feature = "distro"))]
-    if app.state.gupax.auto.is_enabled(&AutoStart::Update) {
-        Update::spawn_thread(
-            &app.og,
-            &app.state.gupax,
-            &app.state_path,
-            &app.update,
-            &mut app.error_state,
-            &app.restart,
-        );
-    } else {
-        info!("Skipping auto-update...");
-    }
+    // #[cfg(not(feature = "distro"))]
+    // if app.state.gupax.auto.is_enabled(&AutoStart::Update) {
+    //     Update::spawn_thread(
+    //         &app.og,
+    //         &app.state.gupax,
+    //         &app.state_path,
+    //         &app.update,
+    //         &mut app.error_state,
+    //         &app.restart,
+    //     );
+    // } else {
+    //     info!("Skipping auto-update...");
+    // }
 
     // [Auto-Crawl]
     // If the crawling is used, we do not use custom backup nodes
@@ -321,4 +322,41 @@ pub fn init_auto(app: &mut App) {
     }
     // [Notifications Service]
     Helper::start_notifications(&app.helper);
+
+    // Notification/refresh of updates is also triggered by automatic updates
+    if app.state.gupax.updates.notification_update && !app.state.gupax.updates.automatic_update {
+        let binaries = BINARIES_NAME
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
+        let gupax_settings = app.state.gupax.clone();
+        let binaries_version = app.binaries_version.clone();
+        let update = app.update.clone();
+        thread::spawn(move || {
+            loop {
+                update.refresh_versions(
+                    binaries.clone(),
+                    gupax_settings.clone(),
+                    binaries_version.clone(),
+                );
+                thread::sleep(Duration::from_hours(24));
+            }
+        });
+    }
+    if app.state.gupax.updates.automatic_update {
+        let gupax_settings = app.state.gupax.clone();
+        let binaries_version = app.binaries_version.clone();
+        let update = app.update.clone();
+        let restart = app.restart.clone();
+        thread::spawn(move || {
+            loop {
+                update.update_all(
+                    gupax_settings.clone(),
+                    binaries_version.clone(),
+                    restart.clone(),
+                );
+                thread::sleep(Duration::from_hours(24));
+            }
+        });
+    }
 }

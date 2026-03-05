@@ -30,92 +30,49 @@ cd skel; check "CD into skel"
 # and that the naming schemes are correct
 title "Linux folder check"
 [[ -f linux/gupax ]]; check "linux/gupax"
-[[ -f linux_b/gupax ]]; check "linux_b/gupax"
-[[ -f linux_b/p2pool/p2pool ]]; check "linux_b/p2pool/p2pool"
-[[ -f linux_b/xmrig/xmrig ]]; check "linux_b/xmrig/xmrig"
-[[ -f linux_b/xmrig-proxy/xmrig-proxy ]]; check "linux_b/xmrig-proxy/xmrig-proxy"
-[[ -f linux_b/node/monerod ]]; check "linux_b/node/monerod"
 title "macOS-x64 folder check"
 [[ -d macos-x64/Gupax.app ]]; check "macos-x64/Gupax.app"
-[[ -d macos-x64_b/Gupax.app ]]; check "macos-x64_b/Gupax.app"
-[[ -f macos-x64_b/Gupax.app/Contents/MacOS/p2pool/p2pool ]]; check "macos-x64_b/p2pool/p2pool"
-[[ -f macos-x64_b/Gupax.app/Contents/MacOS/xmrig/xmrig ]]; check "macos-x64_b/xmrig/xmrig"
-[[ -f macos-x64_b/Gupax.app/Contents/MacOS/xmrig-proxy/xmrig-proxy ]]; check "macos-x64_b/xmrig-proxy/xmrig-proxy"
-[[ -f macos-x64_b/Gupax.app/Contents/MacOS/node/monerod ]]; check "macos-x64_b/node/monerod"
 title "macOS-arm64 folder check"
 [[ -d macos-arm64/Gupax.app ]]; check "macos-arm64/Gupax.app"
-[[ -d macos-arm64_b/Gupax.app ]]; check "macos-arm64_b/Gupax.app"
-[[ -f macos-arm64_b/Gupax.app/Contents/MacOS/p2pool/p2pool ]]; check "macos-arm64_b/p2pool/p2pool"
-[[ -f macos-arm64_b/Gupax.app/Contents/MacOS/xmrig/xmrig ]]; check "macos-arm64_b/xmrig/xmrig"
-## no macos-arm64 xmrig-proxy released todo
-# [[ -f macos-arm64_b/Gupax.app/Contents/MacOS/xmrig-proxy/xmrig-proxy ]]; check "macos-arm64_b/xmrig-proxy/xmrig-proxy"
-[[ -f macos-arm64_b/Gupax.app/Contents/MacOS/node/monerod ]]; check "macos-arm64_b/node/monerod"
 title "Windows folder check"
 [[ -f windows/Gupax.exe ]]; check "windows/Gupax.exe"
-[[ -f windows_b/Gupax.exe ]]; check "windows_b/Gupax.exe"
-[[ -f windows_b/P2Pool/p2pool.exe ]]; check "windows_b/P2Pool/p2pool.exe"
-[[ -f windows_b/XMRig/xmrig.exe ]]; check "windows_b/XMRig/xmrig.exe"
-[[ -f windows_b/XMRig/WinRing0x64.sys ]]; check "windows_b/XMRig/WinRing0x64.sys"
-[[ -f windows_b/XMRig-Proxy/xmrig-proxy.exe ]]; check "windows_b/XMRig-Proxy/xmrig-proxy.exe"
-[[ -f windows_b/Node/monerod.exe ]]; check "windows_b/Node/monerod.exe"
 
 # Get random date for tar/zip
 title "RNG Date"
 RNG=$((EPOCHSECONDS-RANDOM*4)); check "RNG ... $RNG"
 DATE=$(date -d @${RNG}); check "DATE ... $DATE"
 
-# Tar Linux Bundle
 title "Tar Linux"
 # give execution permission
 chmod +x linux/gupax
-chmod +x linux_b/gupax
-chmod +x linux_b/p2pool/p2pool
-chmod +x linux_b/xmrig/xmrig
-chmod +x linux_b/xmrig-proxy/xmrig-proxy
-chmod +x linux_b/node/monerod
-mv linux_b "gupax-$NEW_VER-linux-x64-bundle"; check "linux -> gupax-$NEW_VER-linux-x64-bundle"
-tar -czpf "gupax-${NEW_VER}-linux-x64-bundle.tar.gz" "gupax-$NEW_VER-linux-x64-bundle" --owner=lm --group=lm ; check "tar linux-bundle"
 # Tar Linux Standalone
-mv linux "gupax-$NEW_VER-linux-x64-standalone" 
-tar -czpf "gupax-${NEW_VER}-linux-x64-standalone.tar.gz" "gupax-$NEW_VER-linux-x64-standalone" --owner=lm --group=lm ; check "tar linux-standalone"
+mv linux "gupax-$NEW_VER-linux-x64" 
+tar -czpf "gupax-${NEW_VER}-linux-x64.tar.gz" "gupax-$NEW_VER-linux-x64" --owner=lm --group=lm ; check "tar linux"
 # Remove dir
-rm -r "gupax-$NEW_VER-linux-x64-standalone"; check "rm linux dir"
-rm -r "gupax-$NEW_VER-linux-x64-bundle"; check "rm linux_b dir"
+rm -r "gupax-$NEW_VER-linux-x64"; check "rm linux dir"
 
 # x64
-# Tar macOS Bundle
 title "Tar macOS-x64"
-mv macos-x64_b "gupax-$NEW_VER-macos-x64-bundle"; check "macos-x64_b -> gupax-$NEW_VER-macos-x64-bundle"
-tar -czpf "gupax-${NEW_VER}-macos-x64-bundle.tar.gz" "gupax-$NEW_VER-macos-x64-bundle" --owner=lm --group=lm ; check "tar macos-bundle"
 # Tar macOS Standalone
-mv macos-x64 "gupax-$NEW_VER-macos-x64-standalone"; check "macos-x64 -> gupax-$NEW_VER-macos-x64-standalone"
-tar -czpf "gupax-${NEW_VER}-macos-x64-standalone.tar.gz" "gupax-$NEW_VER-macos-x64-standalone" --owner=lm --group=lm ; check "tar macos-x64-standalone"
+mv macos-x64 "gupax-$NEW_VER-macos-x64"; check "macos-x64 -> gupax-$NEW_VER-macos-x64"
+tar -czpf "gupax-${NEW_VER}-macos-x64.tar.gz" "gupax-$NEW_VER-macos-x64" --owner=lm --group=lm ; check "tar macos-x64"
 # Remove dir
-rm -r "gupax-$NEW_VER-macos-x64-standalone"; check "rm macos-x64 dir"
-rm -r "gupax-$NEW_VER-macos-x64-bundle"; check "rm macos-x64_b dir"
+rm -r "gupax-$NEW_VER-macos-x64"; check "rm macos-x64 dir"
 
 # ARM
-# Tar macOS Bundle
 title "Tar macOS-arm64"
-mv macos-arm64_b "gupax-$NEW_VER-macos-arm64-bundle"; check "macos-arm64_b -> gupax-$NEW_VER-macos-arm64-bundle"
-tar -czpf "gupax-${NEW_VER}-macos-arm64-bundle.tar.gz" "gupax-$NEW_VER-macos-arm64-bundle" --owner=lm --group=lm ; check "tar macos-bundle"
 # Tar macOS Standalone
-mv macos-arm64 "gupax-$NEW_VER-macos-arm64-standalone"; check "macos-arm64 -> gupax-$NEW_VER-macos-arm64-standalone"
-tar -czpf "gupax-${NEW_VER}-macos-arm64-standalone.tar.gz" "gupax-$NEW_VER-macos-arm64-standalone" --owner=lm --group=lm ; check "tar macos-arm64-standalone"
+mv macos-arm64 "gupax-$NEW_VER-macos-arm64"; check "macos-arm64 -> gupax-$NEW_VER-macos-arm64"
+tar -czpf "gupax-${NEW_VER}-macos-arm64.tar.gz" "gupax-$NEW_VER-macos-arm64" --owner=lm --group=lm ; check "tar macos-arm64"
 # Remove dir
-rm -r "gupax-$NEW_VER-macos-arm64-standalone"; check "rm macos-arm64 dir"
-rm -r "gupax-$NEW_VER-macos-arm64-bundle"; check "rm macos-arm64_b dir"
+rm -r "gupax-$NEW_VER-macos-arm64"; check "rm macos-arm64 dir"
 
-# Zip Windows Bundle
 title "Zip Windows"
-mv windows_b "gupax-$NEW_VER-windows-x64-bundle"; check "windows_b -> gupax-$NEW_VER-windows-x64-bundle"
-zip -qr "gupax-${NEW_VER}-windows-x64-bundle.zip" "gupax-$NEW_VER-windows-x64-bundle"; check "zip windows-bundle"
 # Zip Windows Standalone
-mv windows "gupax-$NEW_VER-windows-x64-standalone"; check "windows -> gupax-$NEW_VER-windows-x64-standalone"
-zip -qr "gupax-${NEW_VER}-windows-x64-standalone.zip" "gupax-$NEW_VER-windows-x64-standalone"; check "zip windows-standalone"
+mv windows "gupax-$NEW_VER-windows-x64"; check "windows -> gupax-$NEW_VER-windows-x64"
+zip -qr "gupax-${NEW_VER}-windows-x64.zip" "gupax-$NEW_VER-windows-x64"; check "zip windows"
 # Remove dir
-rm -r "gupax-$NEW_VER-windows-x64-standalone"; check "rm windows dir"
-rm -r "gupax-$NEW_VER-windows-x64-bundle"; check "rm windows_b dir"
+rm -r "gupax-$NEW_VER-windows-x64"; check "rm windows dir"
 
 # SHA256SUMS + Sign
 title "Hash + Sign"

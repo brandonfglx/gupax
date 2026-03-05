@@ -17,6 +17,7 @@
 
 // Hide the Window console for release mode
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+#![feature(path_is_empty)]
 // Only (windows|macos|linux) + (x64|arm64) are supported.
 #[cfg(not(target_pointer_width = "64"))]
 compile_error!("gupax is only compatible with 64-bit CPUs");
@@ -30,7 +31,6 @@ use crate::daemon::start_daemon;
 //---------------------------------------------------------------------------------------------------- Imports
 use crate::constants::*;
 use crate::inits::{init_auto, init_logger, init_options};
-use crate::miscs::clean_dir;
 use crate::utils::*;
 use clap::Parser;
 use egui::Vec2;
@@ -102,7 +102,8 @@ fn main() {
     init_auto(&mut app_lock);
     drop(app_lock);
     // Gupax folder cleanup.
-    match clean_dir() {
+    #[cfg(target_os = "windows")]
+    match crate::miscs::clean_dir() {
         Ok(_) => info!("Temporary folder cleanup ... OK"),
         Err(e) => warn!("Could not cleanup [gupax_tmp] folders: {e}"),
     }

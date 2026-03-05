@@ -63,7 +63,7 @@ https://www.youtube.com/watch?v=8_MOQHYRE1c
 
 ### Basic setup:
 
-1. [Download the bundled version of Gupax](https://github.com/gupax-io/gupax/releases)
+1. [Download Gupax](https://github.com/gupax-io/gupax/releases)
 2. Extract
 3. Add exception from anti-virus (Windows/Max)
 3. Launch Gupax

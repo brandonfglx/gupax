@@ -3,16 +3,16 @@ use std::sync::{Arc, Mutex};
 use crate::app::submenu_enum::SubmenuP2pool;
 use crate::app::{App, AppEgui, Tab};
 use crate::components::node::RemoteNodes;
-#[cfg(target_os = "windows")]
 use crate::errors::{ErrorButtons, ErrorFerris};
 use crate::helper::{Helper, ProcessName, ProcessState};
 use crate::inits::init_text_styles;
+use crate::utils::errors::WarnUpdateData;
 use crate::{NODE_MIDDLE, P2POOL_MIDDLE, SECOND, XMRIG_MIDDLE, XMRIG_PROXY_MIDDLE, XVB_MIDDLE};
 use derive_more::derive::{Deref, DerefMut};
 use log::debug;
 
 impl eframe::App for AppEgui {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let mut app = self.inner.lock();
         // *-------*
         // | DEBUG |
@@ -51,6 +51,9 @@ impl eframe::App for AppEgui {
             app.error_state.set("An instance of xmrig is running outside of Gupax.\nThis is not supported and could lead to crashes on this platform.\nPlease stop your local instance and start xmrig from Gupax Xmrig tab.", ErrorFerris::Error, ErrorButtons::Okay);
             app.xmrig_outside_warning_acknowledge = true;
         }
+
+        #[cfg(not(feature = "distro"))]
+        app.ask_download_binaries();
         // If there's an error, display [ErrorState] on the whole screen until user responds
         debug!("App | Checking if there is an error in [ErrorState]");
         if app.error_state.error {
@@ -117,7 +120,7 @@ impl eframe::App for AppEgui {
         // but also we don't want the user to be able to start it in this case.
         let p_xvb = process_states.find_mut(ProcessName::Xvb);
         p_xvb.alive = p_xvb.state != ProcessState::Dead;
-        app.middle_panel(ctx, frame, key, &process_states);
+        app.middle_panel(ctx, key, &process_states);
     }
 }
 #[derive(Debug)]
@@ -202,4 +205,50 @@ fn mitigate_wgpu_mem_leak(ctx: &egui::Context) -> bool {
     });
 
     is_minimized
+}
+
+impl App {
+    /// ask the user if he wants gupax to download the required binaries
+    /// Will not ask if every path of binaries exist or if he checked the "do not check next time".
+    pub fn ask_download_binaries(&mut self) {
+        if !self.ask_download_start_acknowledge && self.state.gupax.updates.ask_download_start {
+            let p2pool_exist = self.state.gupax.absolute_p2pool_path.is_file();
+            let node_exist = self.state.gupax.absolute_node_path.is_file();
+            let xmrig_exist = self.state.gupax.absolute_xmrig_path.is_file();
+            let xp_exist = self.state.gupax.absolute_xp_path.is_file();
+            if !p2pool_exist || !node_exist || !xmrig_exist || !xp_exist {
+                let msg = format!(
+                    "Gupax is missing the binary of:\n{}\n{}\n{}\n{}\n\nDo you want it to download them now ?",
+                    if !p2pool_exist { "P2Pool" } else { "" },
+                    if !node_exist { "Node" } else { "" },
+                    if !xmrig_exist { "XMRig" } else { "" },
+                    if !xp_exist { "XMRig-Proxy" } else { "" }
+                );
+                let mut binaries = vec![];
+                if !p2pool_exist {
+                    binaries.push("p2pool".to_string());
+                }
+                if !node_exist {
+                    binaries.push("monerod".to_string());
+                }
+                if !xmrig_exist {
+                    binaries.push("xmrig".to_string());
+                }
+                if !xp_exist {
+                    binaries.push("xmrig-proxy".to_string());
+                }
+                self.error_state.set(
+                    msg,
+                    ErrorFerris::Cute,
+                    ErrorButtons::WarnUpdate(WarnUpdateData {
+                        yes_button: "Download missing binaries".to_string(),
+                        no_button: "No, and do not ask again".to_string(),
+                        name: binaries.join(" "),
+                    }),
+                );
+            }
+        }
+        // only check once at start
+        self.ask_download_start_acknowledge = false;
+    }
 }

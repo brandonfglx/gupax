@@ -2,6 +2,7 @@ use crate::app::ErrorState;
 use crate::app::Restart;
 use crate::app::panels::middle::common::toggle::toggle_ui_compact;
 use crate::app::panels::middle::*;
+use crate::app::submenu_enum::SubmenuGupax;
 use crate::components::gupax::*;
 use crate::components::update::Update;
 use crate::components::update::check_binary_path;
@@ -120,7 +121,7 @@ impl Gupax {
                 ui.separator();
                 self.horizontal_flex_auto_start(ui, AutoStart::ALL);
             });
-            if self.simple {
+            if self.submenu != SubmenuGupax::Advanced {
                 return;
             }
 

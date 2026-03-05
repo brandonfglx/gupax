@@ -20,8 +20,6 @@ rustflags = ["-Zlocation-detail=none"]
 # codegen-backend = "cranelift"
 
 [features]
-default = []
-bundle = []
 distro = []
 log=[]
 
@@ -36,6 +34,7 @@ egui = "0.33"
 # egui = {git="https://github.com/emilk/egui"}
 egui_extras = {version="0.33", features = ["image"] }
 # egui_extras = {git="https://github.com/emilk/egui", features = ["image"] }
+egui_commonmark = {version="0.22", features=["better_syntax_highlighting"]}
 
 ## 2023-12-28: https://github.com/hinto-janai/gupax/issues/68
 ##
@@ -74,7 +73,7 @@ strip-ansi-escapes = "0.2.1"
 derive_more = {version="2.1.1", default-features=false, features=["display", "deref", "deref_mut"]}
 serde-this-or-that = "0.5.0"
 readable = "0.16"
-chrono = {version="0.4.43", default-features=false, features=["clock", "std"]}
+chrono = {version="0.4", default-features=false, features=["clock", "std", "serde"]}
 enclose = "1.2.1"
 bounded-vec-deque = {version="0.1.1", default-features=false}
 cfg-if = "1.0"
@@ -104,6 +103,7 @@ tokio-stream = {version = "0.1", default-features=false}
 thiserror = "2.0"
 # Unix dependencies
 [target.'cfg(unix)'.dependencies]
+bzip2-rs = "0.1"
 tar = "0.4.44"
 flate2 = "1.1"
 sudo = "0.6.0"
@@ -123,7 +123,7 @@ egui = {version="0.33", features=["callstack"]}
 [target.'cfg(windows)'.dependencies]
 wgpu = {version = "27.0.1", features=["angle"]}
 zip = "8.0.0"
-windows = "0.61.3"
+windows = "0.62.2"
 is_elevated = "0.1.2"
 elevated-helper = {git="https://github.com/Cyrix126/elevated-helper"}
 uuid = "1.21"

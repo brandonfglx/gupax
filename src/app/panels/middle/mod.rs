@@ -27,9 +27,9 @@ use egui::*;
 use log::debug;
 mod about;
 pub mod common;
-mod gupax;
 mod node;
 mod p2pool;
+mod settings;
 mod status;
 mod xmrig;
 mod xmrig_proxy;
@@ -39,7 +39,6 @@ impl crate::app::App {
     pub fn middle_panel(
         &mut self,
         ctx: &egui::Context,
-        frame: &mut eframe::Frame,
         key: KeyPressed,
         states: &ProcessStatesGui,
     ) {
@@ -73,22 +72,9 @@ impl crate::app::App {
                         ui,
                     );
                 }
-                Tab::Gupax => {
+                Tab::Settings => {
                     debug!("App | Entering [Gupax] Tab");
-                    crate::disk::state::Gupax::show(
-                        &mut self.state.gupax,
-                        &self.og,
-                        &self.state_path,
-                        &self.update,
-                        &self.file_window,
-                        &mut self.error_state,
-                        &self.restart,
-                        frame,
-                        ctx,
-                        ui,
-                        &mut self.must_resize,
-                        &self.notifications_api,
-                    );
+                    self.show_settings(ui);
                 }
                 Tab::Node => {
                     debug!("App | Entering [Node] Tab");

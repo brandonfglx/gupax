@@ -50,9 +50,12 @@ pub fn get_exe_dir() -> Result<String, std::io::Error> {
 
 // Clean any [gupax_update_.*] directories
 // The trailing random bits must be exactly 10 alphanumeric characters
+#[cfg(target_family = "windows")]
 #[cold]
 #[inline(never)]
 pub fn clean_dir() -> Result<(), anyhow::Error> {
+    use log::info;
+    use regex::Regex;
     let regex = Regex::new("^gupax_update_[A-Za-z0-9]{10}$").unwrap();
     for entry in std::fs::read_dir(get_exe_dir()?)? {
         let entry = entry?;
@@ -153,14 +156,11 @@ use egui::TextStyle;
 use egui::Ui;
 use log::error;
 use log::warn;
-use regex::Regex;
 use reqwest_middleware::ClientWithMiddleware;
 use std::path::PathBuf;
 use std::process::exit;
 use std::sync::Arc;
 use std::sync::Mutex;
-
-use log::info;
 
 //---------------------------------------------------------------------------------------------------- Use
 use crate::constants::*;

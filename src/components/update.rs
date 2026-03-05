@@ -32,14 +32,14 @@ use crate::{
     helper::{ProcessName, notification::notif},
 };
 use bytes::Bytes;
-use derive_more::Deref;
+use derive_more::{Deref, Display};
 #[cfg(target_family = "unix")]
 use flate2::bufread::GzDecoder;
 use log::*;
 use regex::Regex;
 use reqwest::{Client, ClientBuilder};
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, fs::create_dir_all, path::Path, process::exit, thread};
+use std::{fs::create_dir_all, path::Path, process::exit, thread};
 use std::{
     process::Command,
     sync::{Arc, Mutex},
@@ -438,11 +438,10 @@ impl Update {
 
                         if let Some(file_name) =
                             Path::new(file).file_name().and_then(|n| n.to_str())
+                            && file_name.eq_ignore_ascii_case(&format!("{name}.exe"))
                         {
-                            if file_name.eq_ignore_ascii_case(&format!("{name}.exe")) {
-                                let mut out = File::create(binary_path)?;
-                                std::io::copy(&mut entry, &mut out)?;
-                            }
+                            let mut out = File::create(binary_path)?;
+                            std::io::copy(&mut entry, &mut out)?;
                         }
                     }
                 }
@@ -597,23 +596,13 @@ impl InnerUpdate {
 
 use chrono::{DateTime, Utc};
 
-#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize, Display)]
+#[display("{}", tag_name)]
 pub struct Release {
     pub tag_name: String,
     pub prerelease: bool,
     pub body: String,
     pub published_at: DateTime<Utc>,
-}
-
-// TODO: pre-release must be shown as BETA.
-impl Display for Release {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if self.prerelease {
-            write!(f, "{} BETA", self.tag_name)
-        } else {
-            write!(f, "{}", self.tag_name)
-        }
-    }
 }
 
 #[derive(Error, Debug)]

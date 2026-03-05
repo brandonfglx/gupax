@@ -87,7 +87,7 @@ impl Helper {
             let line = strip_ansi_escapes::strip_str(line);
 
             // status could be present before 20 lines with a low verbosity value
-            if contains_statuscommand(&line) {
+            if gui_api.lock().unwrap().status_command && contains_statuscommand(&line) {
                 status_output = true;
                 continue;
             }
@@ -125,7 +125,7 @@ impl Helper {
             }
             // if command status is sent by gupax process and not the user, forward it only to update_from_status method.
             // 25 lines after the command are the result of status, with last line finishing by update.
-            if contains_statuscommand(&line) {
+            if gui_api.lock().unwrap().status_command && contains_statuscommand(&line) {
                 status_output = true;
                 continue;
             }
@@ -168,6 +168,7 @@ impl Helper {
                 if contains_end_status(&line) {
                     // end of status
                     status_output = false;
+                    gui_api.lock().unwrap().status_command = false;
                 }
                 continue;
             }
@@ -829,13 +830,15 @@ impl Helper {
                 if (last_status_request_expired || first_loop)
                     && process_lock.state == ProcessState::Alive
                 {
+                    gui_api.lock().unwrap().status_command = true;
+
                     debug!("P2Pool Watchdog | Reading status output of p2pool node");
                     #[cfg(target_os = "windows")]
-                    if let Err(e) = write!(stdin, "statusfromgupax\r\n") {
+                    if let Err(e) = write!(stdin, "status\r\n") {
                         error!("P2Pool Watchdog | STDIN error: {e}");
                     }
                     #[cfg(target_family = "unix")]
-                    if let Err(e) = writeln!(stdin, "statusfromgupax") {
+                    if let Err(e) = writeln!(stdin, "status") {
                         error!("P2Pool Watchdog | STDIN error: {e}");
                     }
                     // Flush.
@@ -1003,6 +1006,7 @@ pub struct PubP2poolApi {
     pub prefer_local_node: bool,
     pub current_node: Option<NodeString>,
     pub window_length_blocks: Option<u64>,
+    pub status_command: bool,
 }
 
 impl Default for PubP2poolApi {
@@ -1061,6 +1065,7 @@ impl PubP2poolApi {
             fails_zmq_since: None,
             current_node: None,
             window_length_blocks: None,
+            status_command: false,
         }
     }
 
@@ -1083,6 +1088,7 @@ impl PubP2poolApi {
             prefer_local_node: std::mem::take(&mut gui_api.prefer_local_node),
             current_node: std::mem::take(&mut gui_api.current_node),
             window_length_blocks: std::mem::take(&mut gui_api.window_length_blocks),
+            status_command: std::mem::take(&mut gui_api.status_command),
             ..pub_api.clone()
         };
     }

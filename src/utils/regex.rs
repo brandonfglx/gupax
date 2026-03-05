@@ -275,7 +275,7 @@ pub fn contains_usepool(l: &str) -> bool {
     LINE_SHARE.is_match(l)
 }
 pub fn contains_statuscommand(l: &str) -> bool {
-    static LINE_SHARE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^statusfromgupax").unwrap());
+    static LINE_SHARE: Lazy<Regex> = Lazy::new(|| Regex::new(r"SideChain status").unwrap());
     LINE_SHARE.is_match(l)
 }
 pub fn contains_yourshare(l: &str) -> bool {

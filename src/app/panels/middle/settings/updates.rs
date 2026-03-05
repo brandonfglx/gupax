@@ -46,8 +46,8 @@ impl App {
     fn view_changelog(&mut self, ui: &mut Ui) {
         ui.group(|ui| {
             ui.vertical_centered(|ui| {
-                ui.group(|ui| {
-                    if let Some(release) = &self.changelog_selected {
+                if let Some(release) = &self.changelog_selected {
+                    ui.group(|ui| {
                         ui.heading("Changelog");
                         ui.label(
                             RichText::new(format!(
@@ -58,20 +58,18 @@ impl App {
                             ))
                             .text_style(TextStyle::Button),
                         );
-                        ScrollArea::vertical().show(ui, |ui| {
-                            CommonMarkViewer::new().show(
-                                ui,
-                                &mut self.markdown_cache,
-                                &release.0.body,
-                            );
-                        });
-                    } else {
+                    });
+                    ScrollArea::vertical().show(ui, |ui| {
+                        CommonMarkViewer::new().show(ui, &mut self.markdown_cache, &release.0.body);
+                    });
+                } else {
+                    ui.group(|ui| {
                         ui.heading("Changelog");
                         ui.label(
                             "Click on a refresh button and then on a version to see the changelog",
                         );
-                    }
-                });
+                    });
+                }
             });
         });
     }

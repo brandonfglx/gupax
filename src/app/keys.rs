@@ -133,7 +133,7 @@ impl App {
         // Check if egui wants keyboard input.
         // This prevents keyboard shortcuts from clobbering TextEdits.
         // (Typing S in text would always [Save] instead)
-        let wants_input = ctx.wants_keyboard_input();
+        let wants_input = ctx.egui_wants_keyboard_input();
 
         if key.is_f11() {
             if ctx.input(|i| i.viewport().maximized == Some(true)) {

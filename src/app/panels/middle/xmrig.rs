@@ -44,7 +44,6 @@ impl Xmrig {
         process: &Arc<Mutex<Process>>,
         api: &Arc<Mutex<PubXmrigApi>>,
         buffer: &mut String,
-        _ctx: &egui::Context,
         ui: &mut egui::Ui,
         p2pool_stratum_port: u16,
     ) {

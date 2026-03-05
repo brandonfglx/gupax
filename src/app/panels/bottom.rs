@@ -23,99 +23,102 @@ impl crate::app::App {
     #[allow(clippy::too_many_arguments)]
     pub fn bottom_panel(
         &mut self,
-        ctx: &egui::Context,
+        ui: &mut egui::Ui,
         key: &KeyPressed,
         wants_input: bool,
         states: &ProcessStatesGui,
     ) {
         // Bottom: app info + state/process buttons
         debug!("App | Rendering BOTTOM bar");
-        TopBottomPanel::bottom("bottom").show(ctx, |ui| {
-            ui.style_mut().override_text_style = Some(TextStyle::Button);
-            let size_font = ui
-                .style()
-                .text_styles
-                .get(&TextStyle::Monospace)
-                .expect("Monospace should be defined at startup")
-                .size;
-            let extra_separator = size_font * 0.7;
-            let bar_height = size_font * 1.7;
-            let tiny_width = ui.available_width() < APP_DEFAULT_WIDTH;
-            // [(status group)(run)(2 submenus)(save/reset)]
-            // [(status group)(3 submenus)(save/reset)]
-            // [(status group)(space)(save/reset)]
-            ScrollArea::horizontal()
-                .scroll_bar_visibility(scroll_area::ScrollBarVisibility::AlwaysHidden)
-                .show(ui, |ui| {
-                    ui.style_mut().spacing.item_spacing.x = if !tiny_width {
-                        ui.available_width() / 200.0
-                    } else {
-                        ui.style_mut().spacing.window_margin.left = 0;
-                        ui.style_mut().spacing.window_margin.right = 0;
-                        ui.style_mut().spacing.window_margin.top = 0;
-                        ui.style_mut().spacing.window_margin.bottom = 0;
-                        // let a minimum space between widget
-                        3.0
-                    };
-                    // ui.style_mut().spacing.item_spacing.y = 0.0;
-                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                        ui.group(|ui| {
-                            self.version(ui, bar_height);
-                            ui.add(Separator::default().grow(extra_separator));
-                            ui.label(self.os);
-                            ui.add(Separator::default().grow(extra_separator));
-                            self.theme_show(ui, ctx);
-                            // width of each status
-                            let width_status = if !tiny_width {
-                                ((ui.available_width()
-                                    / 3.0
-                                    / states
-                                        .iter()
-                                        .filter(|s| {
-                                            self.state.gupax.show_processes.contains(&s.name)
-                                        })
-                                        .count() as f32)
-                                    - spacing(ui))
-                                .max(0.0)
-                            } else {
-                                0.0
-                            };
-                            states
-                                .iter()
-                                .filter(|s| self.state.gupax.show_processes.contains(&s.name))
-                                .for_each(|p| {
-                                    ui.add(Separator::default().grow(extra_separator));
-                                    // width must be minimum if less than 16px is available.
-                                    Self::status_process(p, ui, width_status);
-                                });
-                        });
-
-                        if let Some(name) = self.tab.linked_process() {
-                            // add space, smaller when run actions
-                            let width = ui.available_width() / 16.0;
-                            if !tiny_width {
-                                ui.add_space(width);
-                            }
-                            self.run_actions(ui, states.find(name), key, wants_input);
-                        } else if self.tab != Tab::About {
-                            // bigger space for other tab
-                            let width = ui.available_width() / 8.0;
-                            if !tiny_width {
-                                ui.add_space(width);
-                            }
+        Panel::bottom("bottom")
+            .show_separator_line(true)
+            .show_inside(ui, |ui| {
+                ui.style_mut().override_text_style = Some(TextStyle::Button);
+                let size_font = ui
+                    .style()
+                    .text_styles
+                    .get(&TextStyle::Monospace)
+                    .expect("Monospace should be defined at startup")
+                    .size;
+                let extra_separator = size_font * 0.7;
+                let bar_height = size_font * 1.7;
+                let tiny_width = ui.available_width() < APP_DEFAULT_WIDTH;
+                // [(status group)(run)(2 submenus)(save/reset)]
+                // [(status group)(3 submenus)(save/reset)]
+                // [(status group)(space)(save/reset)]
+                ScrollArea::horizontal()
+                    .scroll_bar_visibility(scroll_area::ScrollBarVisibility::AlwaysHidden)
+                    .show(ui, |ui| {
+                        ui.style_mut().spacing.item_spacing.x = if !tiny_width {
+                            ui.available_width() / 200.0
                         } else {
-                            // even bigger for about tab
-                            let width = ui.available_width() / 2.0;
-                            if !tiny_width {
-                                ui.add_space(width);
-                            }
-                        }
+                            ui.style_mut().spacing.window_margin.left = 0;
+                            ui.style_mut().spacing.window_margin.right = 0;
+                            ui.style_mut().spacing.window_margin.top = 0;
+                            ui.style_mut().spacing.window_margin.bottom = 0;
+                            // let a minimum space between widget
+                            3.0
+                        };
+                        // ui.style_mut().spacing.item_spacing.y = 0.0;
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                            ui.group(|ui| {
+                                self.version(ui, bar_height);
+                                ui.add(Separator::default().grow(extra_separator));
+                                ui.label(self.os);
+                                ui.add(Separator::default().grow(extra_separator));
+                                self.theme_show(ui);
+                                // width of each status
+                                let width_status = if !tiny_width {
+                                    ((ui.available_width()
+                                        / 3.0
+                                        / states
+                                            .iter()
+                                            .filter(|s| {
+                                                self.state.gupax.show_processes.contains(&s.name)
+                                            })
+                                            .count()
+                                            as f32)
+                                        - spacing(ui))
+                                    .max(0.0)
+                                } else {
+                                    0.0
+                                };
+                                states
+                                    .iter()
+                                    .filter(|s| self.state.gupax.show_processes.contains(&s.name))
+                                    .for_each(|p| {
+                                        ui.add(Separator::default().grow(extra_separator));
+                                        // width must be minimum if less than 16px is available.
+                                        Self::status_process(p, ui, width_status);
+                                    });
+                            });
 
-                        self.submenu(ui);
-                        self.save_reset_ui(ui, key, wants_input);
+                            if let Some(name) = self.tab.linked_process() {
+                                // add space, smaller when run actions
+                                let width = ui.available_width() / 16.0;
+                                if !tiny_width {
+                                    ui.add_space(width);
+                                }
+                                self.run_actions(ui, states.find(name), key, wants_input);
+                            } else if self.tab != Tab::About {
+                                // bigger space for other tab
+                                let width = ui.available_width() / 8.0;
+                                if !tiny_width {
+                                    ui.add_space(width);
+                                }
+                            } else {
+                                // even bigger for about tab
+                                let width = ui.available_width() / 2.0;
+                                if !tiny_width {
+                                    ui.add_space(width);
+                                }
+                            }
+
+                            self.submenu(ui);
+                            self.save_reset_ui(ui, key, wants_input);
+                        });
                     });
-                });
-        });
+            });
     }
 
     fn version(&self, ui: &mut Ui, height: f32) {
@@ -130,7 +133,7 @@ impl crate::app::App {
             ui.add_sized([0.0, height], Label::new(&self.name_version));
         }
     }
-    fn theme_show(&mut self, ui: &mut Ui, ctx: &egui::Context) {
+    fn theme_show(&mut self, ui: &mut Ui) {
         let icon = match self.state.gupax.theme {
             GupaxTheme::Dark => "🌙",
             GupaxTheme::Light => "🌞",
@@ -141,7 +144,7 @@ impl crate::app::App {
             .on_hover_text_at_pointer(self.state.gupax.theme.helper())
             .clicked()
         {
-            self.toggle_theme(ctx);
+            self.toggle_theme(ui.ctx());
         }
     }
     fn toggle_theme(&mut self, ctx: &egui::Context) {

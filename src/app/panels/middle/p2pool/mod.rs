@@ -45,7 +45,6 @@ impl P2pool {
         process: &Arc<Mutex<Process>>,
         api: &Arc<Mutex<PubP2poolApi>>,
         buffer: &mut String,
-        _ctx: &egui::Context,
         ui: &mut egui::Ui,
         backup_nodes: BackupNodes,
         path: &Path,

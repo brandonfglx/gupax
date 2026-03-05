@@ -33,11 +33,11 @@ use egui::*;
 impl crate::app::App {
     pub(in crate::app) fn quit_error_panel(
         &mut self,
-        ctx: &egui::Context,
+        ui: &mut egui::Ui,
         processes: &[ProcessStateGui],
         key: &KeyPressed,
     ) {
-        CentralPanel::default().show(ctx, |ui| {
+        CentralPanel::default().show_inside(ui, |ui| {
             ui.vertical_centered(|ui| {
                 // Set width/height/font
                 let width = self.size.x;

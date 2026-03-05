@@ -36,15 +36,10 @@ mod xmrig_proxy;
 mod xvb;
 impl crate::app::App {
     #[allow(clippy::too_many_arguments)]
-    pub fn middle_panel(
-        &mut self,
-        ctx: &egui::Context,
-        key: KeyPressed,
-        states: &ProcessStatesGui,
-    ) {
+    pub fn middle_panel(&mut self, ui: &mut egui::Ui, key: KeyPressed, states: &ProcessStatesGui) {
         // Middle panel, contents of the [Tab]
         debug!("App | Rendering CENTRAL_PANEL (tab contents)");
-        CentralPanel::default().show(ctx, |ui| {
+        CentralPanel::default().show_inside(ui, |ui| {
             self.size.x = ui.available_width();
             self.size.y = ui.available_height();
             // This sets the Ui dimensions after Top/Bottom are filled
@@ -68,7 +63,6 @@ impl crate::app::App {
                         self.max_threads,
                         &self.gupax_p2pool_api,
                         &self.benchmarks,
-                        ctx,
                         ui,
                     );
                 }
@@ -98,7 +92,6 @@ impl crate::app::App {
                         &self.p2pool,
                         &self.p2pool_api,
                         &mut self.p2pool_stdin,
-                        ctx,
                         ui,
                         self.backup_hosts.clone(),
                         &self.state.gupax.absolute_p2pool_path,
@@ -115,7 +108,6 @@ impl crate::app::App {
                         &self.xmrig,
                         &self.xmrig_api,
                         &mut self.xmrig_stdin,
-                        ctx,
                         ui,
                         self.state.p2pool.stratum_port(),
                     );
@@ -141,7 +133,6 @@ impl crate::app::App {
                     crate::disk::state::Xvb::show(
                         &mut self.state.xvb,
                         &self.state.p2pool.address,
-                        ctx,
                         ui,
                         &self.xvb_api,
                         states.is_alive(ProcessName::Xvb),

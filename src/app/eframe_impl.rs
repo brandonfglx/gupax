@@ -12,23 +12,23 @@ use derive_more::derive::{Deref, DerefMut};
 use log::debug;
 
 impl eframe::App for AppEgui {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let mut app = self.inner.lock();
         // *-------*
         // | DEBUG |
         // *-------*
-        if mitigate_wgpu_mem_leak(ctx) {
+        if mitigate_wgpu_mem_leak(ui.ctx()) {
             return;
         }
         debug!("App | ----------- Start of [update()] -----------");
         // If closing
-        app.quit(ctx);
+        app.quit(ui.ctx());
         // Handle Keys
-        let (key, wants_input) = app.keys_handle(ctx);
+        let (key, wants_input) = app.keys_handle(ui.ctx());
 
         // Refresh AT LEAST once a second
         debug!("App | Refreshing frame once per second");
-        ctx.request_repaint_after(SECOND);
+        ui.ctx().request_repaint_after(SECOND);
 
         // Get P2Pool/XMRig process state.
         // These values are checked multiple times so
@@ -37,7 +37,7 @@ impl eframe::App for AppEgui {
         let mut process_states = ProcessStatesGui::new(&app);
         // resize window and fonts if button "set" has been clicked in Gupax tab
         if app.must_resize {
-            init_text_styles(ctx, app.state.gupax.selected_scale);
+            init_text_styles(ui.ctx(), app.state.gupax.selected_scale);
             app.must_resize = false;
         }
         // check for windows that a local instance of xmrig is not running outside of Gupax. Important because it could lead to crashes on this platform.
@@ -57,7 +57,7 @@ impl eframe::App for AppEgui {
         // If there's an error, display [ErrorState] on the whole screen until user responds
         debug!("App | Checking if there is an error in [ErrorState]");
         if app.error_state.error {
-            app.quit_error_panel(ctx, &process_states, &key);
+            app.quit_error_panel(ui, &process_states, &key);
             return;
         }
         // Compare [og == state] & [node_vec/pool_vec] and enable diff if found.
@@ -113,14 +113,14 @@ impl eframe::App for AppEgui {
             }
         }
 
-        app.top_panel(ctx);
-        app.bottom_panel(ctx, &key, wants_input, &process_states);
+        app.top_panel(ui);
+        app.bottom_panel(ui, &key, wants_input, &process_states);
         // xvb_is_alive is not the same for bottom and for middle.
         // for status we don't want to enable the column when it is retrying requests.
         // but also we don't want the user to be able to start it in this case.
         let p_xvb = process_states.find_mut(ProcessName::Xvb);
         p_xvb.alive = p_xvb.state != ProcessState::Dead;
-        app.middle_panel(ctx, key, &process_states);
+        app.middle_panel(ui, key, &process_states);
     }
 }
 #[derive(Debug)]

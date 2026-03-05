@@ -155,7 +155,9 @@ impl Update {
         thread::spawn(move || {
             update.lock().unwrap().updating = true;
             let binaries = BINARIES_NAME.into_iter().map(|s| s.to_string()).collect();
-            if let Err(e) = update.spawn_refresh_versions(&binaries, &gupax_settings) {
+            if let Err(e) =
+                update.spawn_refresh_versions(&binaries, &gupax_settings, &binaries_version)
+            {
                 notif(&e.to_string());
                 update.lock().unwrap().msg = format!("Refresh of metadata failed: {e}");
                 update.lock().unwrap().updating = false;
@@ -233,11 +235,18 @@ impl Update {
         }
         false
     }
-    pub fn refresh_versions(&self, binaries: Vec<String>, gupax_settings: Gupax) {
+    pub fn refresh_versions(
+        &self,
+        binaries: Vec<String>,
+        gupax_settings: Gupax,
+        binaries_version: BinariesVersion,
+    ) {
         let update = self.clone();
         thread::spawn(move || {
             update.lock().unwrap().updating = true;
-            if let Err(e) = update.spawn_refresh_versions(&binaries, &gupax_settings) {
+            if let Err(e) =
+                update.spawn_refresh_versions(&binaries, &gupax_settings, &binaries_version)
+            {
                 notif(&e.to_string());
             }
             update.lock().unwrap().updating = false;
@@ -250,6 +259,7 @@ impl Update {
         &self,
         binaries: &Vec<String>,
         gupax_settings: &Gupax,
+        binaries_version: &BinariesVersion,
     ) -> Result<(), reqwest::Error> {
         let client = self.lock().unwrap().client.clone();
         for name in binaries {
@@ -277,13 +287,8 @@ impl Update {
                 .await?;
             dbg!(&updated_versions);
 
-            let mut update = self.lock().unwrap();
-            let versions = update.releases_by_name(name);
             if let Some(v) = updated_versions.first()
-                && (versions
-                    .first()
-                    .is_some_and(|first| v.tag_name != first.tag_name)
-                    || versions.is_empty())
+                && v.tag_name != binaries_version.version_by_name(name)
             {
                 // there is a new version, send a notification
                 notif(&format!(
@@ -291,8 +296,8 @@ impl Update {
                     v.tag_name,
                     v.published_at.date_naive()
                 ));
-                *versions = updated_versions;
             }
+            *self.lock().unwrap().releases_by_name(name) = updated_versions;
         }
         Ok(())
     }

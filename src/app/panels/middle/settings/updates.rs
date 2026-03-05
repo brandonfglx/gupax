@@ -200,8 +200,11 @@ impl App {
                 .on_hover_text("Refresh available versions")
                 .clicked()
             {
-                self.update
-                    .refresh_versions(vec![name.to_string()], self.state.gupax.clone());
+                self.update.refresh_versions(
+                    vec![name.to_string()],
+                    self.state.gupax.clone(),
+                    self.binaries_version.clone(),
+                );
             }
         });
     }

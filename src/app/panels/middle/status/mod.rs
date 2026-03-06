@@ -54,7 +54,6 @@ impl Status {
         max_threads: u16,
         gupax_p2pool_api: &Arc<Mutex<GupaxP2poolApi>>,
         benchmarks: &[Benchmark],
-        _ctx: &egui::Context,
         ui: &mut egui::Ui,
     ) {
         //---------------------------------------------------------------------------------------------------- [Processes]

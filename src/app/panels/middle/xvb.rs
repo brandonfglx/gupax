@@ -52,7 +52,6 @@ impl crate::disk::state::Xvb {
     pub fn show(
         &mut self,
         address: &str,
-        _ctx: &egui::Context,
         ui: &mut egui::Ui,
         api: &Arc<Mutex<PubXvbApi>>,
         is_alive: bool,

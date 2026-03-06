@@ -1,7 +1,7 @@
 cargo-features = ["profile-rustflags", "codegen-backend"]
 [package]
 name = "gupax"
-version = "2.0.0-rc2"
+version = "2.0.0-rc3"
 authors = ["cyrix126 <contact@gupax.io>"]
 description = "GUI uniting P2Pool and XMRig"
 documentation = "https://github.com/cyrix126/gupax"

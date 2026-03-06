@@ -16,6 +16,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 use std::process::exit;
+use std::thread::sleep;
+use std::time::Duration;
 
 use crate::app::Tab;
 use crate::app::eframe_impl::ProcessStateGui;
@@ -231,6 +233,7 @@ impl crate::app::App {
                             .clicked()
                         {
                             self.error_state.reset()
+
                         }
                         // If [Esc] was pressed, assume [No]
                         if key.is_esc()
@@ -255,6 +258,26 @@ impl crate::app::App {
                             .add_sized([width, height / 2.0], Button::new("Quit"))
                             .clicked()
                         {
+                            // need to shutdown any remaining service
+                        for process in processes {
+                            if process.alive {
+                                process.stop(&self.helper);
+                            }
+                            }
+                            for process in processes {
+
+                                // a stop() should always put a service alive value to false
+                                // #[allow(clippy:while_immutable_condition)]
+                                 while match process.name {
+                                    crate::helper::ProcessName::Node => self.node.lock().unwrap().is_alive(),
+                                    crate::helper::ProcessName::P2pool => self.p2pool.lock().unwrap().is_alive(),
+                                    crate::helper::ProcessName::Xmrig => self.p2pool.lock().unwrap().is_alive(),
+                                    crate::helper::ProcessName::XmrigProxy => self.p2pool.lock().unwrap().is_alive(),
+                                    crate::helper::ProcessName::Xvb => self.xvb.lock().unwrap().is_alive()
+                                } {
+                                    sleep(Duration::from_millis(100));
+                                }
+                            }
                             if self.state.gupax.auto.save_before_quit {
                                 self.save_before_quit();
                             }

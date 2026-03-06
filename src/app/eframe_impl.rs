@@ -3,9 +3,11 @@ use std::sync::{Arc, Mutex};
 use crate::app::submenu_enum::SubmenuP2pool;
 use crate::app::{App, AppEgui, Tab};
 use crate::components::node::RemoteNodes;
+#[cfg(not(feature = "distro"))]
 use crate::errors::{ErrorButtons, ErrorFerris};
 use crate::helper::{Helper, ProcessName, ProcessState};
 use crate::inits::init_text_styles;
+#[cfg(not(feature = "distro"))]
 use crate::utils::errors::WarnUpdateData;
 use crate::{NODE_MIDDLE, P2POOL_MIDDLE, SECOND, XMRIG_MIDDLE, XMRIG_PROXY_MIDDLE, XVB_MIDDLE};
 use derive_more::derive::{Deref, DerefMut};
@@ -210,6 +212,7 @@ fn mitigate_wgpu_mem_leak(ctx: &egui::Context) -> bool {
 impl App {
     /// ask the user if he wants gupax to download the required binaries
     /// Will not ask if every path of binaries exist or if he checked the "do not check next time".
+    #[cfg(not(feature = "distro"))]
     pub fn ask_download_binaries(&mut self) {
         if !self.ask_download_start_acknowledge && self.state.gupax.updates.ask_download_start {
             let p2pool_exist = self.state.gupax.absolute_p2pool_path.is_file();

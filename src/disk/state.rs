@@ -280,6 +280,7 @@ impl UpdateSettings {
             _ => panic!("unrecognized name"),
         }
     }
+    #[cfg(not(feature = "distro"))]
     pub fn selected_version_by_name_mut(&mut self, name: &str) -> &mut String {
         match name {
             "gupax" => &mut self.gupax_version,
@@ -300,6 +301,7 @@ impl UpdateSettings {
             _ => panic!("unrecognized name"),
         }
     }
+    #[cfg(not(feature = "distro"))]
     pub fn source_by_name_mut(&mut self, name: &str) -> &mut String {
         match name {
             "gupax" => &mut self.gupax_source,

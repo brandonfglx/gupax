@@ -19,9 +19,11 @@ use std::process::exit;
 use std::thread::sleep;
 use std::time::Duration;
 
+#[cfg(not(feature = "distro"))]
 use crate::app::Tab;
 use crate::app::eframe_impl::ProcessStateGui;
 use crate::app::keys::KeyPressed;
+#[cfg(not(feature = "distro"))]
 use crate::app::submenu_enum::SubmenuGupax;
 use crate::disk::node::Node;
 use crate::disk::state::State;
@@ -383,6 +385,7 @@ impl crate::app::App {
                             .add_sized([width, height / 2.0], Button::new(data.yes_button.clone()))
                             .clicked()
                         {
+    #[cfg(not(feature = "distro"))]
                             match data.yes_button.as_str() {
                                 "Download missing binaries" => {
                     self.ask_download_start_acknowledge = true;
@@ -421,6 +424,7 @@ impl crate::app::App {
                                 .add_sized([width, height / 2.0], Button::new(data.no_button.clone()))
                                 .clicked()
                         {
+    #[cfg(not(feature = "distro"))]
                             if data.yes_button == "Download missing binaries" {
                     self.state.gupax.updates.ask_download_start = false;
                 }

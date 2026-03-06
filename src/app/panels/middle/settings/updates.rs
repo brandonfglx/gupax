@@ -1,11 +1,15 @@
-use egui::{
-    Checkbox, ComboBox, Label, ProgressBar, RichText, ScrollArea, Separator, TextStyle, Ui,
-};
+#[cfg(not(feature = "distro"))]
+use egui::{Checkbox, ComboBox, Label, ProgressBar, ScrollArea, Separator, TextStyle};
+#[cfg(not(feature = "distro"))]
 use egui_commonmark::CommonMarkViewer;
+#[cfg(not(feature = "distro"))]
 use log::warn;
 
+use crate::app::App;
+use egui::{RichText, Ui};
+
+#[cfg(not(feature = "distro"))]
 use crate::{
-    app::App,
     components::update::BINARIES_NAME,
     miscs::height_txt_before_button,
     utils::{
@@ -20,10 +24,10 @@ impl App {
         {
             ui.horizontal_wrapped(|ui|{
             ui.label(RichText::new("Gupax has been installed by your distribution package manager.\nYou should update it from it.")
-                    .color(ORANGE));
+                    .color(crate::ORANGE));
                 });
-            return;
         }
+        #[cfg(not(feature = "distro"))]
         ScrollArea::both().show(ui, |ui| {
             self.update_progress(ui);
             ui.horizontal(|ui| {
@@ -43,6 +47,7 @@ impl App {
         });
     }
 
+    #[cfg(not(feature = "distro"))]
     fn view_changelog(&mut self, ui: &mut Ui) {
         ui.group(|ui| {
             ui.vertical_centered(|ui| {
@@ -73,6 +78,7 @@ impl App {
             });
         });
     }
+    #[cfg(not(feature = "distro"))]
     fn update_progress(&mut self, ui: &mut Ui) {
         ui.group(|ui| {
             ui.vertical_centered(|ui| {
@@ -91,6 +97,7 @@ impl App {
             });
         });
     }
+    #[cfg(not(feature = "distro"))]
     fn warn_downgrade(&mut self, name: &str) -> bool {
         let selected_numeric_version: String = self
             .state
@@ -134,6 +141,7 @@ impl App {
         }
         true
     }
+    #[cfg(not(feature = "distro"))]
     pub fn warn_switch_beta(&mut self, name: &str) -> bool {
         if !self.binaries_version.version_by_name(name).contains("BETA")
             && self
@@ -158,6 +166,7 @@ impl App {
         }
         true
     }
+    #[cfg(not(feature = "distro"))]
     fn update_all_widget(&mut self, ui: &mut Ui) {
         ui.add_space(SPACE * 0.9);
         ui.group(|ui|{
@@ -182,6 +191,7 @@ impl App {
         });
     }
 
+    #[cfg(not(feature = "distro"))]
     fn binary_update_settings_widget(&mut self, ui: &mut Ui, name: &str) {
         ui.group(|ui| {
             ui.set_min_width((ui.available_width() / 2.0) - SPACE);
@@ -201,6 +211,7 @@ impl App {
             self.source_field(ui, name);
         });
     }
+    #[cfg(not(feature = "distro"))]
     fn refresh_versions_button(&mut self, ui: &mut Ui, name: &str) {
         let updating = self.update.lock().unwrap().updating;
         ui.add_enabled_ui(!updating, |ui| {
@@ -217,6 +228,7 @@ impl App {
             }
         });
     }
+    #[cfg(not(feature = "distro"))]
     fn update_binary_button(&mut self, ui: &mut Ui, name: &str) {
         let enable = !self
             .update
@@ -242,6 +254,7 @@ impl App {
             }
         });
     }
+    #[cfg(not(feature = "distro"))]
     fn list_versions(&mut self, ui: &mut Ui, name: &str) {
         let selected_version = self.state.gupax.updates.selected_version_by_name_mut(name);
         if !self
@@ -275,6 +288,7 @@ impl App {
                 });
         }
     }
+    #[cfg(not(feature = "distro"))]
     fn source_field(&mut self, ui: &mut Ui, name: &str) {
         let repo = self.state.gupax.updates.source_by_name_mut(name);
         ui.horizontal(|ui|{
@@ -286,6 +300,7 @@ impl App {
         });
     }
 
+    #[cfg(not(feature = "distro"))]
     pub fn horizontal_flex_button_update(&mut self, ui: &mut Ui) {
         let notification_button = (
             Checkbox::new(

@@ -314,6 +314,7 @@ impl Update {
         Ok(())
     }
     // service should be stopped by UI when clicking the button update
+    #[cfg(not(feature = "distro"))]
     pub fn update_version(
         &mut self,
         binaries: Vec<String>,

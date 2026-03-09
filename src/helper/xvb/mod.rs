@@ -209,8 +209,8 @@ impl Helper {
             state_p2pool,
         )
         .await;
-        let mut xp_alive = false;
-        let hashrate_provider = if xp_alive {
+        let mut xp_alive = process_xp.lock().unwrap().state == ProcessState::Alive;
+        let mut hashrate_provider = if xp_alive {
             HashrateProvider::Proxy(gui_api_xp.clone(), proxy_img.clone(), client.clone())
         } else {
             HashrateProvider::Xmrig(gui_api_xmrig.clone(), xmrig_img.clone(), client.clone())
@@ -270,6 +270,19 @@ impl Helper {
                 // check if first loop the state of Xmrig-Proxy
                 if first_loop {
                     xp_alive = process_xp.lock().unwrap().state == ProcessState::Alive;
+                    hashrate_provider = if xp_alive {
+                        HashrateProvider::Proxy(
+                            gui_api_xp.clone(),
+                            proxy_img.clone(),
+                            client.clone(),
+                        )
+                    } else {
+                        HashrateProvider::Xmrig(
+                            gui_api_xmrig.clone(),
+                            xmrig_img.clone(),
+                            client.clone(),
+                        )
+                    };
                     msg_retry_done = false;
                     *retry.lock().unwrap() = false;
                 }

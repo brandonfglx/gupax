@@ -123,8 +123,8 @@ impl Algorithm {
             ProcessName::Xvb,
         );
         let distributor = Distributor {
-            fallback_pool: decision.0,
-            pools_with_target: if let Some(target) = decision.1 {
+            fallback_pool: decision.0.clone(),
+            pools_with_target: if let Some(target) = decision.1.clone() {
                 vec![target]
             } else {
                 vec![]
@@ -141,6 +141,28 @@ impl Algorithm {
                 ProcessName::Xvb,
             );
         }
+        let hr_sent_p2pool = if decision.0 == self.parameters.envs.p2pool_pool {
+            self.current_controllable_hr
+                - decision
+                    .1
+                    .unwrap_or(Target {
+                        pool: Pool::Unknown,
+                        target_hr: 0.0,
+                    })
+                    .target_hr
+        } else if let Some(target) = decision.1
+            && target.pool == self.parameters.envs.p2pool_pool
+        {
+            target.target_hr
+        } else {
+            0.0
+        };
+        gui_api_xvb
+            .lock()
+            .unwrap()
+            .p2pool_sent_last_hour_samples
+            .0
+            .push_back(hr_sent_p2pool);
     }
     fn decision_cause_msg(&self, cause: DecisionCause) -> String {
         match cause {
@@ -246,6 +268,7 @@ impl Algorithm {
         if self.parameters.config.catch_up
             && let Some(target) = &decision.1
             && self.fast_mode(target)
+            && target.pool == self.parameters.envs.xvb_pool
         {
             return (
                 self.parameters.envs.xvb_pool.clone(),
@@ -364,9 +387,15 @@ impl Algorithm {
                 SECOND_PER_BLOCK_P2POOL_NANO
             }
         };
-        let minimum_hr = ((self.p2pool_difficulty / (pws * second_per_block)) as f32
-            * (1.0 + (self.parameters.config.p2pool_buffer as f32 / 100.0)))
-            - self.estimate_external_p2pool_hr() as f32;
+        let p2pool_difficulty = self.p2pool_difficulty;
+        let p2pool_buffer = self.parameters.config.p2pool_buffer;
+        let estimated_external_p2pool_hr = self.estimate_external_p2pool_hr() as f32;
+        let minimum_hr = ((p2pool_difficulty / (pws * second_per_block)) as f32
+            * (1.0 + (p2pool_buffer as f32 / 100.0)))
+            - estimated_external_p2pool_hr;
+        info!(
+            "Minimum HR required on P2Pool is {minimum_hr}H/s = P2Pool difficulty ({p2pool_difficulty}) / (PWS ({pws}) * SECONDS PER BLOCK ({second_per_block})) * (1.0 + (p2pool_buffer ({p2pool_buffer}) / 100)) - estimated external p2pool hr ({estimated_external_p2pool_hr})"
+        );
         minimum_hr.max(0.0)
     }
     /// HR that would rest if the minimum was given to p2pool

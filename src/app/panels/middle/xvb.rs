@@ -17,6 +17,7 @@
 
 use crate::helper::xvb::algorithm::{ManualDonationLevel, XvbModeChoice};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use egui::{Align, Image, Label, RichText, ScrollArea, TextStyle, Ui};
 use log::debug;
@@ -37,7 +38,7 @@ use crate::utils::constants::{
     XVB_DONATION_LEVEL_WHALE_DONOR_HELP, XVB_FAILURE_FIELD, XVB_HERO_SELECT, XVB_MANUAL_POOL,
     XVB_MANUAL_SLIDER_MANUAL_P2POOL_HELP, XVB_MANUAL_SLIDER_MANUAL_XVB_HELP,
     XVB_MODE_MANUAL_DONATION_LEVEL_HELP, XVB_MODE_MANUAL_P2POOL_HELP, XVB_MODE_MANUAL_XVB_HELP,
-    XVB_ROUND_TYPE_FIELD, XVB_URL_RULES, XVB_WINNER_FIELD,
+    XVB_ROUND_TYPE_FIELD, XVB_TIMEFRAME, XVB_URL_RULES, XVB_WINNER_FIELD,
 };
 use crate::utils::regex::Regexes;
 use crate::{XVB_MINING_ON_FIELD, XVB_P2POOL_BUFFER, XVB_SIDECHAIN};
@@ -247,6 +248,20 @@ impl crate::disk::state::Xvb {
                 api.lock().unwrap().algo_config.p2pool_watch_sidechain = self.algo_config.p2pool_watch_sidechain;
             }
          });
+         ui.horizontal(|ui|{
+            // allow user to modify the buffer for p2pool
+            // button
+            if ui.add_sized(
+                [0.0 , text_height],
+                egui::Slider::new(&mut self.manual_timeframe_minutes, 1..=30).suffix("mn")
+                .text("Decision timeframe")
+            ).on_hover_text(XVB_TIMEFRAME).changed() {
+                self.algo_config.timeframe = Duration::from_mins(self.manual_timeframe_minutes.into());
+                api.lock().unwrap().algo_config.timeframe= self.algo_config.timeframe;
+                api.lock().unwrap().update_samples_timeframe();
+            }
+
+            });
         // Allow user to choose XvB pool manually
         // checkbox to enable
         ui.checkbox(&mut self.manual_pool_enabled, "Manual selection of the XvB pool").on_hover_text(XVB_MANUAL_POOL);

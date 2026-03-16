@@ -351,8 +351,8 @@ impl Helper {
                 let last_request_expired =
                     last_request.lock().unwrap().elapsed() >= Duration::from_secs(60);
                 let should_refresh_before_next_algo = is_algo_started_once
-                    && last_algorithm.lock().unwrap().elapsed()
-                        >= Duration::from_secs((XVB_TIME_ALGO as f32 * 0.95) as u64)
+                    && last_algorithm.lock().unwrap().elapsed().as_secs_f32()
+                        >= gui_api.lock().unwrap().algo_config.timeframe.as_secs_f32() * 0.95
                     && last_request.lock().unwrap().elapsed() >= Duration::from_secs(25);
                 let process_alive = process.lock().unwrap().state == ProcessState::Alive;
                 if ((last_request_expired || first_loop)
@@ -505,6 +505,15 @@ impl SamplesAverageHour {
 impl PubXvbApi {
     pub fn new() -> Self {
         Self::default()
+    }
+    pub fn update_samples_timeframe(&mut self) {
+        let timeframe_secs = self.algo_config.timeframe.as_secs();
+        let capacity = (3600 / timeframe_secs) as usize;
+        let mut vec = BoundedVecDeque::new(capacity);
+        for _ in 0..capacity {
+            vec.push_back(0.0f32);
+        }
+        self.p2pool_sent_last_hour_samples = SamplesAverageHour(vec);
     }
     // The issue with just doing [gui_api = pub_api] is that values get overwritten.
     // This doesn't matter for any of the values EXCEPT for the output,  so we must
@@ -913,20 +922,16 @@ fn update_indicator_algo(
     {
         let pool = pub_api.lock().unwrap().current_pool.clone();
         let time_donated = gui_api.lock().unwrap().stats_priv.time_donated;
+        let timeframe = gui_api.lock().unwrap().algo_config.timeframe.as_secs_f32();
         let msg_indicator = match pool {
-            Some(Pool::P2pool(_))
-                if time_donated > 0.0 && time_donated != XVB_TIME_ALGO as f32 / 1000.0 =>
-            {
+            Some(Pool::P2pool(_)) if time_donated > 0.0 && time_donated != timeframe => {
                 // algo is mining on p2pool but will switch to XvB after
                 // show time remaining on p2pool
                 // todo: debug and fix brief 0s
                 // We want to show in seconds as we do not refresh the UI fast enough for milis for performance reasons
-                pub_api.lock().unwrap().stats_priv.time_switch_pool = (XVB_TIME_ALGO
-                    .checked_sub(last_algorithm.lock().unwrap().elapsed().as_millis() as u64)
-                    .unwrap_or_default()
-                    .checked_sub((time_donated * 1000.0) as u64)
-                    .unwrap_or_default()
-                    / 1000)
+                pub_api.lock().unwrap().stats_priv.time_switch_pool = (timeframe
+                    - last_algorithm.lock().unwrap().elapsed().as_secs_f32()
+                    - time_donated)
                     as u32;
                 "time until switch to mining on XvB".to_string()
             }
@@ -934,11 +939,8 @@ fn update_indicator_algo(
                 // algo is mining on XvB or complelty mining on p2pool.
                 // show remaining time before next decision of algo
                 // because time of last algorithm could depass a little bit XVB_TIME_ALGO before next run, check the sub.
-                pub_api.lock().unwrap().stats_priv.time_switch_pool = (XVB_TIME_ALGO
-                    .checked_sub(last_algorithm.lock().unwrap().elapsed().as_millis() as u64)
-                    .unwrap_or_default()
-                    / 1000)
-                    as u32;
+                pub_api.lock().unwrap().stats_priv.time_switch_pool =
+                    (timeframe - last_algorithm.lock().unwrap().elapsed().as_secs_f32()) as u32;
                 "time until next decision of algorithm".to_string()
             }
         };

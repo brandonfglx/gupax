@@ -33,6 +33,8 @@ pub struct Distributor {
     /// Timeframe to take a new decision and to mine between the pools for this duration.
     /// If you need to attain an average per x (hour/day), timeframe should not be above x.
     pub timeframe: Duration,
+    /// The minimum time to wait between two update of the hashrate provider
+    pub min_time: Duration,
 }
 #[derive(Debug, PartialEq, Clone)]
 pub struct Target {
@@ -56,10 +58,12 @@ impl Distributor {
         let pools_with_target = &self.pools_with_target;
         let hp = &self.hashrate_provider;
         let current_controllable_hr = hp.current_controllable_hr();
+        let min_hr = current_controllable_hr
+            * (1.0 - (self.timeframe.as_secs_f32() / self.min_time.as_secs_f32()));
         let hr_fallback = current_controllable_hr
             - pools_with_target
                 .iter()
-                .map(|pwt: &Target| pwt.target_hr)
+                .map(|pwt: &Target| pwt.target_hr.max(min_hr))
                 .sum::<f32>();
 
         let duration_fallback = self.timeframe.as_secs_f32()
@@ -67,17 +71,17 @@ impl Distributor {
         gui_api_xvb.lock().unwrap().stats_priv.time_donated =
             self.timeframe.as_secs_f32() - duration_fallback;
         info!(
-            "duration fallback: {}s = timeframe {} * (hr_fallback {} / current controllable hr {}).max(1.0)",
+            "duration fallback: {}s = timeframe {} * (hr_fallback {} / current controllable hr {}).min(1.0)).max(mini time)",
             duration_fallback,
             self.timeframe.as_secs_f32(),
             hr_fallback,
             self.hashrate_provider.current_controllable_hr(),
         );
 
-        if duration_fallback > 0.0 {
+        if duration_fallback >= self.min_time.as_secs_f32() {
             output_console(
                 &mut gui_api_xvb.lock().unwrap().output,
-                &format!("Sending {duration_fallback}s to {}", fallback),
+                &format!("Sending {duration_fallback:.2}s to {}", fallback),
                 ProcessName::Xvb,
             );
             if hp.current_pool().as_ref() != Some(fallback) {
@@ -89,10 +93,11 @@ impl Distributor {
         }
 
         for target in self.pools_with_target.iter() {
-            let duration_target = self.timeframe.as_secs_f32()
-                * (target.target_hr / current_controllable_hr).min(1.0);
+            let duration_target = (self.timeframe.as_secs_f32()
+                * (target.target_hr / current_controllable_hr).min(1.0))
+            .max(self.min_time.as_secs_f32());
             info!(
-                "duration target {}: {}s = timeframe {} * (target_hr {} / current controllable hr {}).max(1.0)",
+                "duration target {}: {}s = timeframe {} * (target_hr {} / current controllable hr {}).min(1.0)).max(mini time)",
                 target.pool,
                 duration_target,
                 self.timeframe.as_secs_f32(),
@@ -102,7 +107,7 @@ impl Distributor {
             if duration_target > 0.0 {
                 output_console(
                     &mut gui_api_xvb.lock().unwrap().output,
-                    &format!("Sending {duration_target}s to {}", target.pool),
+                    &format!("Sending {duration_target:.2}s to {}", target.pool),
                     ProcessName::Xvb,
                 );
                 if hp.current_pool().as_ref() != Some(&target.pool) {

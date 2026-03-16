@@ -151,6 +151,7 @@ The algorithm will watch the HR estimated by the stratum data of the p2pool node
 ";
 pub const XVB_MANUAL_POOL: &str = "Enable this to force the algorithm to connect to a specific XvB pool, without using the considered fastest";
 pub const XVB_P2POOL_BUFFER: &str = "Set the % amount of additional HR to send to p2pool. Will reduce (if positive) or augment (if negative) the chances to miss the p2pool window.\n\n- In Auto or Hero mode, the algorithm will keep enough HR on the p2pool side to conform to the buffer\n\n- In Manual modes, the algorithm will ignore the p2pool buffer";
+pub const XVB_TIMEFRAME: &str = "Set the duration between each decision of the algorithm.\n\nIncreasing it will allow you to drop the minimum hashrate you will be able to send in an hour but the algorithm will be less reactive to hashrate fluctuation and vice versa.\n\nThe minimum time being sent to the target will always be at least 5 seconds.\n\nExample: If the hasrate you produce is 100KH/s, setting the duration to 5 minutes will allow you to send at minimum 833H/s since 100_000 / 600 * 5 = 833.33.\n\nAdvise: If you use your computer often with Gupax, prefer a short duration. Otherwise, or if you have a lot of hashrate produced on this machine, choose a longer duration.\n\nDefault is 5 minutes.";
 
 pub const START_OPTIONS_HOVER: &str = "Start the process with theses options.\nThe \"Reset to simple/advanced options\" are arguments constructed from the settings.\nYou can replace them with your own";
 pub const NODE_START_OPTIONS_HINT: &str = "--zmq-pub tcp://<ip>:port --out-peers 32 --in-peers 64 --add-priority-node <ip>:<port> --disable-dns-checkpoints --enable-dns-blocklist --sync-pruned-blocks --prune-blockchain";
@@ -541,9 +542,9 @@ pub const XVB_URL_RULES: &str = "https://xmrvsbeast.com/p2pool/rules.html";
 // buffer in percentage of HR to have plus the requirement.
 pub const XVB_SIDE_MARGIN_1H: f32 = 0.2;
 // time is in ms
-pub const XVB_TIME_ALGO: u64 = 60_000;
+pub const XVB_TIME_ALGO: u64 = 300_000;
 // minimum time to send to XvB if any
-pub const _XVB_MIN_TIME_SEND: u64 = 50;
+pub const XVB_MIN_TIME_SEND: u64 = 5_000;
 pub const XVB_HERO_SELECT: &str = "Donate as much as possible while keeping a share on p2pool, increases the odds of your round winning\nWhen modified, the algorithm will use the new choice at the next decision.";
 pub const XVB_FAILURE_FIELD: &str = "Failures";
 pub const XVB_DONATED_1H_FIELD: &str = "Donated last hour";

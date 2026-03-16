@@ -44,6 +44,7 @@ use crate::{
         },
     },
     miscs::{output_console, output_console_without_time},
+    utils::constants::XVB_MIN_TIME_SEND,
 };
 /// The Algorithm struct will possess every raw values
 /// that are needed to make a decision + configuration
@@ -131,6 +132,7 @@ impl Algorithm {
             },
             hashrate_provider: self.parameters.envs.hashrate_provider.clone(),
             timeframe: self.parameters.config.timeframe,
+            min_time: self.parameters.config.minimum_time_send,
         };
         info!("Run of a decision of the distribution algorithm");
 
@@ -199,6 +201,9 @@ pub struct AlgoConfig {
     pub timeframe: Duration,
     pub p2pool_buffer: i8,
     pub catch_up: bool,
+    /// XMRig and XMRig-Proxy might not process two requests sent one after
+    /// another almost immediately in the same order they have been sent.
+    pub minimum_time_send: Duration,
 }
 
 impl Default for AlgoConfig {
@@ -209,6 +214,7 @@ impl Default for AlgoConfig {
             timeframe: Duration::from_millis(XVB_TIME_ALGO),
             p2pool_buffer: 25,
             catch_up: true,
+            minimum_time_send: Duration::from_millis(XVB_MIN_TIME_SEND),
         }
     }
 }
@@ -359,8 +365,10 @@ impl Algorithm {
     }
 
     fn estimate_external_p2pool_hr(&self) -> u64 {
-        let mut p2pool_external_hashrate =
-            self.estimate_p2pool_total_hr() - self.p2pool_avg_last_hour_hashrate;
+        let mut p2pool_external_hashrate = self
+            .estimate_p2pool_total_hr()
+            .checked_sub(self.p2pool_avg_last_hour_hashrate)
+            .unwrap_or_default();
         // do not take into account very small external hashrate as the estimation has a margin of error.
         if (p2pool_external_hashrate as f32)
             < (self.estimate_p2pool_total_hr() as f32 * Self::MARGIN_EXTERNAL_HR)

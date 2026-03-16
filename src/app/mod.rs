@@ -753,6 +753,7 @@ impl App {
         // Need to save to pub as we read it as instant data
         debug!("Setting runtime_mode & runtime_manual_amount");
         app.xvb_api.lock().unwrap().algo_config = app.state.xvb.algo_config.clone();
+        app.xvb_api.lock().unwrap().update_samples_timeframe();
         app.xvb_api.lock().unwrap().runtime_mode = XvbMode::from(&app.state.xvb);
 
         drop(og); // Unlock [og]

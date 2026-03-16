@@ -136,8 +136,10 @@ impl App {
         let wants_input = ctx.egui_wants_keyboard_input();
 
         if key.is_f11() {
-            if ctx.input(|i| i.viewport().maximized == Some(true)) {
-                info!("fullscreen bool");
+            info!("fullscreen bool");
+            if ctx.input(|i| i.viewport().fullscreen == Some(true)) {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+            } else {
                 ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
             }
         // Change Tabs LEFT

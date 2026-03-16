@@ -385,7 +385,7 @@ impl Helper {
                                     debug!("XvB Watchdog | Attempting HTTP private API request...");
                                     // reload private stats, it send a signal if error that will be captured on the upper thread.
                                     XvbPrivStats::update_stats(
-                                        &client, &state_p2pool.address,  &gui_api, &process,
+                                        &client, &state_p2pool.address,  &pub_api, &process,
                                     )
                                     .await;
                                     *last_request.lock().unwrap() = Instant::now();
@@ -393,10 +393,12 @@ impl Helper {
                                     // verify in which round type we are
                                     let round = pub_api.lock().unwrap().stats_priv.round_type(share > 0);
                                     // refresh the round we participate in.
-                                    debug!("XvB | Round type: {round:#?}");
                                     pub_api.lock().unwrap().stats_priv.round_participate = round;
                                     // verify if we are the winner of the current round
                                     let win_current = pub_api.lock().unwrap().stats_pub.winner == Helper::head_tail_of_monero_address(&state_p2pool.address).as_str();                                    pub_api.lock().unwrap().stats_priv.win_current = win_current;
+                                   // apply private data immediately to gui_api as we need to use gui_api for the algorithm because some
+                                   // options in the UI can be changed by the user without a restart
+                                   gui_api.lock().unwrap().stats_priv = pub_api.lock().unwrap().stats_priv.clone();
                                 }
                                 let hashrate = hashrate_provider.current_controllable_hr();
                                 let difficulty_data_is_ready = gui_api_p2pool.lock().unwrap().p2pool_difficulty_u64 > 100_000;
@@ -514,10 +516,6 @@ impl PubXvbApi {
 
         let algo_config = std::mem::take(&mut gui_api.algo_config);
         let runtime_mode = std::mem::take(&mut gui_api.runtime_mode);
-        let time_donated = std::mem::take(&mut gui_api.stats_priv.time_donated);
-        let fails = std::mem::take(&mut gui_api.stats_priv.fails);
-        let donor_1hr_avg = std::mem::take(&mut gui_api.stats_priv.donor_1hr_avg);
-        let donor_24hr_avg = std::mem::take(&mut gui_api.stats_priv.donor_24hr_avg);
         if !buf.is_empty() {
             output.push_str(&buf);
         }
@@ -526,14 +524,6 @@ impl PubXvbApi {
             algo_config,
             runtime_mode,
             // current_pool,
-            stats_priv: XvbPrivStats {
-                // pool,
-                time_donated,
-                fails,
-                donor_1hr_avg,
-                donor_24hr_avg,
-                ..pub_api.stats_priv.clone()
-            },
             ..pub_api.clone()
         };
     }
@@ -900,10 +890,6 @@ fn reset_data_xvb(pub_api: &Arc<Mutex<PubXvbApi>>, gui_api: &Arc<Mutex<PubXvbApi
     let runtime_mode = std::mem::take(&mut guard.runtime_mode);
     let current_pool = std::mem::take(&mut pub_api.lock().unwrap().current_pool);
     let pool = std::mem::take(&mut pub_api.lock().unwrap().stats_priv.pool);
-    let time_donated = std::mem::take(&mut guard.stats_priv.time_donated);
-    let fails = std::mem::take(&mut guard.stats_priv.fails);
-    let donor_1hr_avg = std::mem::take(&mut guard.stats_priv.donor_1hr_avg);
-    let donor_24hr_avg = std::mem::take(&mut guard.stats_priv.donor_24hr_avg);
 
     *pub_api.lock().unwrap() = PubXvbApi::new();
     pub_api.lock().unwrap().stats_priv.pool = pool;
@@ -911,10 +897,6 @@ fn reset_data_xvb(pub_api: &Arc<Mutex<PubXvbApi>>, gui_api: &Arc<Mutex<PubXvbApi
 
     guard.runtime_mode = runtime_mode;
     guard.algo_config = algo_config;
-    guard.stats_priv.time_donated = time_donated;
-    guard.stats_priv.fails = fails;
-    guard.stats_priv.donor_1hr_avg = donor_1hr_avg;
-    guard.stats_priv.donor_24hr_avg = donor_24hr_avg;
 }
 // print date time to console output in same format than xmrig
 fn update_indicator_algo(

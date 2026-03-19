@@ -134,11 +134,14 @@ impl Pool {
         for pool in xvb_pools_to_ping.clone() {
             info!("XvB | ping {pool} XvB pool");
             handles.push(spawn(async move {
-                let socket_address = format!("{}:{}", pool.url(), pool.port())
-                    .to_socket_addrs()
-                    .expect("hardcored valued should always convert to SocketAddr")
-                    .collect::<Vec<SocketAddr>>()[0];
-                (port_ping(socket_address, TIMEOUT_NODE_PING).await, pool)
+                if let Ok(socket_addresses) =
+                    format!("{}:{}", pool.url(), pool.port()).to_socket_addrs()
+                {
+                    let socket_addr = socket_addresses.collect::<Vec<SocketAddr>>()[0];
+                    (port_ping(socket_addr, TIMEOUT_NODE_PING).await, pool)
+                } else {
+                    (Ok(TIMEOUT_NODE_PING), pool)
+                }
             }));
         }
         // ping pools at the same time

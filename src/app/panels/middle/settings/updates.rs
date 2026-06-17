@@ -99,28 +99,9 @@ impl App {
     }
     #[cfg(not(feature = "distro"))]
     fn warn_downgrade(&mut self, name: &str) -> bool {
-        let selected_numeric_version: String = self
-            .state
-            .gupax
-            .updates
-            .selected_version_by_name(name)
-            .chars()
-            .filter(|c| c.is_ascii_digit())
-            .collect::<Vec<_>>()
-            .into_iter()
-            .collect();
-        let current_numeric_version: String = self
-            .binaries_version
-            .version_by_name(name)
-            .chars()
-            .filter(|c| c.is_ascii_digit())
-            .collect::<Vec<_>>()
-            .into_iter()
-            .collect();
-        if let Ok(selected) = selected_numeric_version.parse::<u32>()
-            && let Ok(current) = current_numeric_version.parse::<u32>()
-            && selected < current
-        {
+        let selected = parse_version(self.state.gupax.updates.selected_version_by_name(name));
+        let current = parse_version(self.binaries_version.version_by_name(name));
+        if selected < current {
             warn!("Trying to downgrade");
             let msg = if name != "gupax" {
                 "You are trying to downgrade a binary. This is potentially dangerous as it is unsupported."
@@ -353,7 +334,100 @@ impl App {
     }
 }
 
-// for gupax,p2pool,monerod,xmrig,xmrig-proxy
-// refresh/update
-// button select version (specific, latest, beta)
-// source url
+fn parse_version(version: &str) -> Vec<u32> {
+    let version = version.trim_start_matches('v');
+    let (base, prerelease) = match version.split_once("-rc") {
+        Some((base, rc)) => (base, Some(rc.parse().unwrap_or(0))),
+        None => (version, None),
+    };
+    let mut version: Vec<u32> = base.split('.').map(|n| n.parse().unwrap_or(0)).collect();
+    //   v2.0.0      -> [2,0,0, 1,0]
+    //   v2.0.0-rc1  -> [2,0,0, 0,1]
+    match prerelease {
+        Some(rc) => version.extend([0, rc]),
+        None => version.extend([1, 0]),
+    }
+    version
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_version;
+
+    fn is_downgrade(selected: &str, current: &str) -> bool {
+        parse_version(selected) < parse_version(current)
+    }
+
+    #[test]
+    fn parse_strips_v_prefix_and_splits_components() {
+        // A "1,0" marker is appended to every final release (no pre-release).
+        assert_eq!(parse_version("v4.16"), vec![4, 16, 1, 0]);
+        assert_eq!(parse_version("v4.15.1"), vec![4, 15, 1, 1, 0]);
+        assert_eq!(parse_version("v6.25.0"), vec![6, 25, 0, 1, 0]);
+        assert_eq!(parse_version("v0.18.4.6"), vec![0, 18, 4, 6, 1, 0]);
+        assert_eq!(parse_version("v2.0.1"), vec![2, 0, 1, 1, 0]);
+    }
+
+    #[test]
+    fn parse_handles_missing_v_prefix() {
+        assert_eq!(parse_version("4.16"), vec![4, 16, 1, 0]);
+        assert_eq!(parse_version("0.18.4.5"), vec![0, 18, 4, 5, 1, 0]);
+    }
+
+    #[test]
+    fn parse_release_candidate_marker() {
+        assert_eq!(parse_version("v2.0.0-rc3"), vec![2, 0, 0, 0, 3]);
+        assert_eq!(parse_version("v2.0.0-rc2"), vec![2, 0, 0, 0, 2]);
+        assert_eq!(parse_version("v2.0.0"), vec![2, 0, 0, 1, 0]);
+        assert!(is_downgrade("v2.0.0-rc2", "v2.0.0-rc3"));
+        assert!(!is_downgrade("v2.0.0-rc3", "v2.0.0-rc2"));
+        assert!(!is_downgrade("v2.0.0-rc3", "v2.0.0-rc3"));
+        assert!(!is_downgrade("v2.0.0", "v2.0.0-rc3"));
+        assert!(is_downgrade("v2.0.0-rc3", "v2.0.0"));
+        assert!(is_downgrade("v1.3.11", "v2.0.0-rc3"));
+    }
+
+    #[test]
+    fn p2pool_pre_release() {
+        assert_eq!(parse_version("pre-release-v4.16"), vec![0, 16, 1, 0]);
+    }
+
+    #[test]
+    fn upgrade_is_not_a_downgrade() {
+        assert!(!is_downgrade("v4.16", "v4.15.1"));
+        assert!(!is_downgrade("v4.15", "v4.14"));
+        assert!(!is_downgrade("v4.15.1", "v4.15"));
+        assert!(!is_downgrade("v6.26.0", "v6.25.0"));
+        assert!(!is_downgrade("v6.22.3", "v6.22.2"));
+        assert!(!is_downgrade("v6.23.0", "v6.22.3"));
+        assert!(!is_downgrade("v0.18.5.0", "v0.18.4.6"));
+        assert!(!is_downgrade("v0.18.4.6", "v0.18.4.5"));
+        assert!(is_downgrade("v0.18.4.6", "v0.18.5.0"));
+        assert!(is_downgrade("v0.18.4.5", "v0.18.4.6"));
+        assert!(is_downgrade("v0.18.4.0", "v0.18.4.1"));
+        assert!(!is_downgrade("v2.0.1", "v2.0.0"));
+        assert!(!is_downgrade("v2.0.0", "v1.3.11"));
+        assert!(!is_downgrade("v1.3.11", "v1.3.10"));
+    }
+
+    #[test]
+    fn downgrade_is_detected() {
+        assert!(is_downgrade("v4.15.1", "v4.16"));
+        assert!(is_downgrade("v4.14", "v4.15"));
+        assert!(is_downgrade("v4.15", "v4.15.1"));
+        assert!(is_downgrade("v6.25.0", "v6.26.0"));
+        assert!(is_downgrade("v6.22.2", "v6.22.3"));
+        assert!(is_downgrade("v6.22.3", "v6.23.0"));
+        assert!(is_downgrade("v2.0.0", "v2.0.1"));
+        assert!(is_downgrade("v1.3.11", "v2.0.0"));
+        assert!(is_downgrade("v1.3.10", "v1.3.11"));
+    }
+
+    #[test]
+    fn same_version_is_not_a_downgrade() {
+        assert!(!is_downgrade("v4.16", "v4.16"));
+        assert!(!is_downgrade("v4.15.1", "v4.15.1"));
+        assert!(!is_downgrade("v0.18.5.0", "v0.18.5.0"));
+        assert!(!is_downgrade("v2.0.0-rc1", "v2.0.0-rc1"));
+    }
+}

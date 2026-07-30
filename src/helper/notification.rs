@@ -20,6 +20,9 @@ impl Helper {
     #[inline(never)]
     // The "frontend" function that parses the arguments, and spawns either the [Simple] or [Advanced] Node watchdog thread.
     pub fn start_notifications(helper: &Arc<Mutex<Self>>) {
+        #[cfg(target_os = "macos")]
+        let _ = notify_rust::set_application("com.github.cyrix126.gupax");
+
         let process_node = Arc::clone(&helper.lock().unwrap().node);
         let process_p2pool = Arc::clone(&helper.lock().unwrap().p2pool);
         let process_xmrig = Arc::clone(&helper.lock().unwrap().xmrig);

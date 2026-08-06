@@ -488,8 +488,9 @@ impl Update {
     ) -> Result<(Bytes, String), reqwest::Error> {
         let url = match name {
             "gupax" => Self::standard_download_url(source, name, version),
-            "p2pool" => Self::standard_download_url(source, name, version)
-                .replace("arm64", "aarch64"),
+            "p2pool" => {
+                Self::standard_download_url(source, name, version).replace("arm64", "aarch64")
+            }
             "xmrig" => Self::standard_download_url(source, name, version)
                 .replace("-v", "-")
                 .replace("linux", "linux-static"),

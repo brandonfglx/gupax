@@ -228,24 +228,6 @@ impl crate::app::App {
                             self.error_state.reset()
                         }
                     },
-                    // no means to exit without saving the state
-                    ErrorButtons::YesQuit => {
-                        if ui
-                            .add_sized([width, height / 2.0], Button::new("Yes"))
-                            .clicked()
-                        {
-                            self.error_state.reset()
-
-                        }
-                        // If [Esc] was pressed, assume [No]
-                        if key.is_esc()
-                            || ui
-                                .add_sized([width, height / 2.0], Button::new("No"))
-                                .clicked()
-                        {
-                            exit(0);
-                        }
-                    }
                     // Quit means exiting saving the state
                     StayQuit => {
                         // If [Esc] was pressed, assume [Stay]

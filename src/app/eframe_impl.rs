@@ -16,9 +16,6 @@ use log::debug;
 impl eframe::App for AppEgui {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let mut app = self.inner.lock();
-        // *-------*
-        // | DEBUG |
-        // *-------*
         if mitigate_wgpu_mem_leak(ui.ctx()) {
             return;
         }

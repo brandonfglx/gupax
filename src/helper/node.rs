@@ -103,13 +103,10 @@ impl Helper {
                 args.push("--prune-blockchain".to_string());
             }
             StartOptionsMode::Advanced => {
-                let dir = if state.path_db.is_empty() {
-                    String::from(".bitmonero")
-                } else {
-                    state.path_db.to_string()
-                };
-                args.push("--data-dir".to_string());
-                args.push(dir);
+                if !state.path_db.is_empty() {
+                    args.push("--data-dir".to_string());
+                    args.push(state.path_db.clone());
+                }
                 args.push("--zmq-pub".to_string());
                 args.push(format!("tcp://{}:{}", state.zmq_ip, state.zmq_port));
                 args.push("--rpc-bind-ip".to_string());

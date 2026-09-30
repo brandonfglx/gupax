@@ -63,10 +63,8 @@ fn install_handlers(sender: TraySender) {
                 button: MouseButton::Left,
                 button_state: MouseButtonState::Up,
                 ..
-            } => {
-                if !after_double_click.swap(false, Ordering::Relaxed) {
-                    sender.send(TrayCmd::ToggleShowHide);
-                }
+            } if !after_double_click.swap(false, Ordering::Relaxed) => {
+                sender.send(TrayCmd::ToggleShowHide);
             }
             _ => {}
         }));

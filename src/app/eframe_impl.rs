@@ -414,7 +414,7 @@ impl eframe::App for GuiApp {
         ) {
             // The frame hiding the window is still displayed: paint it with the
             // theme background, as the clear color is dark.
-            egui::CentralPanel::default().show_inside(ui, |_| {});
+            egui::CentralPanel::default().show(ui, |_| {});
             return;
         }
         debug!("App | ----------- Start of [update()] -----------");
@@ -558,7 +558,7 @@ impl ProcessStatesGui {
 }
 
 fn shutdown_screen(ui: &mut egui::Ui) {
-    egui::CentralPanel::default().show_inside(ui, |ui| {
+    egui::CentralPanel::default().show(ui, |ui| {
         ui.vertical_centered(|ui| {
             ui.add_space(ui.available_height() / 3.0);
             ui.heading("Stopping Gupax...");

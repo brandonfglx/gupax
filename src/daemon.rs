@@ -185,8 +185,8 @@ Address:                   {}
         api.average_effort,
         api.current_effort,
         text_node,
-        &img.chain,
-        &img.address
+        img.chain,
+        img.address
     )
 }
 fn status_xmrig(app: &App) -> String {
@@ -209,9 +209,9 @@ Threads:                     {}/{}
         api.diff,
         api.accepted,
         api.rejected,
-        &api.pool.as_ref().unwrap_or(&Pool::Unknown),
+        api.pool.as_ref().unwrap_or(&Pool::Unknown),
         img.threads,
-        &app.max_threads
+        app.max_threads
     )
 }
 fn status_xp(app: &App) -> String {
@@ -230,7 +230,7 @@ Pool:                        {}
         api.accepted,
         api.rejected,
         api.miners,
-        &api.pool.as_ref().unwrap_or(&Pool::Unknown),
+        api.pool.as_ref().unwrap_or(&Pool::Unknown),
     )
 }
 fn status_xvb(app: &App) -> String {

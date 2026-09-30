@@ -37,7 +37,7 @@ fn icon_argb() -> &'static (Vec<u8>, u32, u32) {
     ICON.get_or_init(|| {
         let icon = &crate::inits::ICON;
         let mut data = icon.rgba.clone();
-        for pixel in data.chunks_exact_mut(4) {
+        for pixel in data.as_chunks_mut::<4>().0 {
             pixel.rotate_right(1);
         }
         (data, icon.width, icon.height)
@@ -185,8 +185,8 @@ mod test {
         let (rgba, source_width, source_height) = crate::miscs::icon_rgba(BYTES_ICON);
         assert_eq!((*width, *height), (source_width, source_height));
         assert_eq!(argb.len(), rgba.len());
-        for (argb, rgba) in argb.chunks_exact(4).zip(rgba.chunks_exact(4)) {
-            assert_eq!(argb, [rgba[3], rgba[0], rgba[1], rgba[2]]);
+        for (argb, rgba) in argb.as_chunks::<4>().0.iter().zip(rgba.as_chunks::<4>().0) {
+            assert_eq!(*argb, [rgba[3], rgba[0], rgba[1], rgba[2]]);
         }
     }
 }

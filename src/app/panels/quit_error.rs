@@ -37,7 +37,7 @@ impl crate::app::App {
         processes: &[ProcessStateGui],
         key: &KeyPressed,
     ) {
-        CentralPanel::default().show_inside(ui, |ui| {
+        CentralPanel::default().show(ui, |ui| {
             ui.vertical_centered(|ui| {
                 // Set width/height/font
                 let width = self.size.x;
@@ -92,7 +92,7 @@ impl crate::app::App {
                             [width, height],
                             Label::new(format!(
                                 "--- Gupax has encountered an error! ---\n{}",
-                                &self.error_state.msg
+                                self.error_state.msg
                             )),
                         );
                         ui.add_sized(
@@ -105,7 +105,7 @@ impl crate::app::App {
                             [width, height],
                             Label::new(format!(
                                 "--- Gupax has encountered an error! ---\n{}",
-                                &self.error_state.msg
+                                self.error_state.msg
                             )),
                         );
                         ui.add_sized([width, height], Label::new("Reset the manual node list?"))
@@ -119,7 +119,7 @@ impl crate::app::App {
                             [width, height],
                             Label::new(format!(
                                 "--- Gupax needs admin privilege for XMRig! ---\n{}",
-                                &self.error_state.msg
+                                self.error_state.msg
                             )),
                         );
                         ui.style_mut().override_text_style = Some(TextStyle::Small);

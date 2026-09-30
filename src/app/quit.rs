@@ -202,7 +202,7 @@ impl App {
     /// Write a setting Gupax decided by itself, and nothing else: the file
     /// gets this one change, so the tabs' unsaved edits stay unsaved, and
     /// [`App::og`] gets it too for [`App::diff`] and the Reset button.
-    fn persist_gupax_flag(&mut self, set: impl Fn(&mut crate::disk::state::Gupax)) {
+    pub(super) fn persist_gupax_flag(&mut self, set: impl Fn(&mut crate::disk::state::Gupax)) {
         set(&mut self.state.gupax);
         set(&mut self.og.lock().unwrap().gupax);
         let saved = crate::disk::state::State::get(&self.state_path).and_then(|mut on_disk| {

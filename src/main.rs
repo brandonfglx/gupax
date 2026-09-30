@@ -25,7 +25,7 @@ compile_error!("gupax is only compatible with 64-bit CPUs");
 compile_error!("gupax is only built for windows/macos/linux");
 
 use crate::app::AppEgui;
-use crate::app::eframe_impl::{gui_background_loop, run_gui, start_in_tray};
+use crate::app::eframe_impl::{gui_background_loop, pick_renderer, run_gui, start_in_tray};
 use crate::cli::Cli;
 use crate::daemon::start_daemon;
 use crate::tray::{TrayChannel, TraySlot};
@@ -118,6 +118,11 @@ fn main() {
         }
     }
     let app = AppEgui::new(now, &args);
+    // Before [init_auto], so a Gupax with no renderer left to try starts no
+    // process.
+    if args.runs_gui() && !pick_renderer(&app) {
+        return;
+    }
     let mut app_lock = app.inner.lock();
     init_auto(&mut app_lock);
     drop(app_lock);

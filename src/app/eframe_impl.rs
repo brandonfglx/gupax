@@ -11,6 +11,7 @@ use crate::inits::init_text_styles;
 use crate::tray::QuitRequest;
 #[cfg(not(feature = "distro"))]
 use crate::utils::errors::WarnUpdateData;
+use crate::utils::renderer::RendererAttempts;
 use crate::{NODE_MIDDLE, P2POOL_MIDDLE, SECOND, XMRIG_MIDDLE, XMRIG_PROXY_MIDDLE, XVB_MIDDLE};
 use derive_more::derive::{Deref, DerefMut};
 use log::{debug, error, info, warn};
@@ -36,6 +37,8 @@ impl GuiApp {
         tray_slot: crate::tray::TraySlot,
         tray_channel: Rc<crate::tray::TrayChannel>,
     ) -> Self {
+        // The renderer works: eframe creates it before the app.
+        RendererAttempts::new(&app.inner.lock().os_data_path).clear();
         let app = AppEgui::cc(cc, resolution, app);
         tray_channel.set_context(&cc.egui_ctx);
         crate::tray::show_on_reopen(tray_channel.sender());
@@ -247,6 +250,29 @@ pub fn gui_background_loop(
     }
 }
 
+/// Switch to the other renderer when the configured one crashed the previous
+/// start. Returns `false` when both renderers crashed.
+pub fn pick_renderer(app: &AppEgui) -> bool {
+    let mut guard = app.inner.lock();
+    let attempts = RendererAttempts::new(&guard.os_data_path);
+    if attempts.both_crashed() {
+        error!("Both renderers crashed Gupax on its previous starts");
+        error!("Delete [{}] to try them again", attempts.path().display());
+        error!("Please open an issue on https://github.com/gupax-io/gupax/issues");
+        return false;
+    }
+    let renderer = guard.current_renderer();
+    if attempts.crashed(renderer) {
+        let use_glow = !guard.state.gupax.renderer_use_glow;
+        guard.persist_gupax_flag(|gupax| gupax.renderer_use_glow = use_glow);
+        warn!(
+            "The {renderer} renderer crashed Gupax on its previous start, switching to {}",
+            guard.current_renderer()
+        );
+    }
+    true
+}
+
 /// Run the eframe event loop until the window closes. If the configured
 /// renderer crashes, switch to the other one and retry once (the new
 /// choice is kept at the next state save).
@@ -269,7 +295,14 @@ pub fn run_gui(
         }
         options
     };
-    let renderer = app.inner.lock().current_renderer();
+    let (renderer, attempts) = {
+        let guard = app.inner.lock();
+        (
+            guard.current_renderer(),
+            RendererAttempts::new(&guard.os_data_path),
+        )
+    };
+    attempts.record(renderer);
     info!("starting Gupax with renderer: {renderer}");
     if let Err(e) = eframe::run_native(
         name_version,
@@ -288,6 +321,7 @@ pub fn run_gui(
         let renderer = guard.current_renderer();
         warn!("Restarting with Gupax with renderer {renderer}");
         drop(guard);
+        attempts.record(renderer);
         if let Err(e) = eframe::run_native(
             name_version,
             options(renderer),

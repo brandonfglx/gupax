@@ -102,17 +102,11 @@ pub struct App {
     // Misc state
     pub tab: Tab,   // What tab are we on?
     pub size: Vec2, // Top-level width and Top-level height
-    // Alpha (transparency)
-    // This value is used to incrementally increase/decrease
-    // the transparency when resizing. Basically, it fades
-    // in/out of black to hide jitter when resizing with [init_text_styles()]
-    pub alpha: u8,
     // This is a one time trigger so [init_text_styles()] isn't
     // called 60x a second when resizing the window. Instead,
     // it only gets called if this bool is true and the user
     // is hovering over egui (ctx.is_pointer_over_area()).
     pub must_resize: bool, // Sets the flag so we know to [init_text_styles()]
-    pub resizing: bool,    // Are we in the process of resizing? (For black fade in/out)
     // State
     pub og: Arc<Mutex<State>>, // og = Old state to compare against
     pub state: State,          // state = Working state (current settings)
@@ -413,8 +407,6 @@ impl App {
             p2pool_stdin: String::with_capacity(10),
             xmrig_stdin: String::with_capacity(10),
             xmrig_proxy_stdin: String::with_capacity(10),
-            resizing: false,
-            alpha: 0,
             no_startup: false,
             gupax_p2pool_api: arc_mut!(GupaxP2poolApi::new()),
             pub_sys,

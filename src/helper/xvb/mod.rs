@@ -136,7 +136,7 @@ impl Helper {
         {
             let mut lock = process.lock().unwrap();
             lock.state = ProcessState::Middle;
-            lock.signal = ProcessSignal::None;
+            lock.reset_signal_on_start();
             lock.start = std::time::Instant::now();
         }
         // verify if address is existent on XvB server

@@ -15,10 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-use std::process::exit;
-use std::thread::sleep;
-use std::time::Duration;
-
 #[cfg(not(feature = "distro"))]
 use crate::app::Tab;
 use crate::app::eframe_impl::ProcessStateGui;
@@ -228,6 +224,32 @@ impl crate::app::App {
                             self.error_state.reset()
                         }
                     },
+                    // One-time question on the first close of the window.
+                    // [Esc] cancels the close and asks again at the next close.
+                    TrayOnClose => {
+                        if ui
+                            .add_sized([width, height / 2.0], Button::new("Yes"))
+                            .clicked()
+                        {
+                            self.save_tray_on_close_answer(true);
+                            self.error_state.reset();
+                            self.hide_to_tray(ui.ctx(), true);
+                        }
+                        if ui
+                            .add_sized([width, height / 2.0], Button::new("No"))
+                            .clicked()
+                        {
+                            self.save_tray_on_close_answer(false);
+                            self.error_state.reset();
+                            // Answering No still closes the window: send the close again, now
+                            // that the question is answered.
+                            ui.ctx()
+                                .send_viewport_cmd(egui::viewport::ViewportCommand::Close);
+                        }
+                        if key.is_esc() {
+                            self.error_state.reset();
+                        }
+                    }
                     // Quit means exiting saving the state
                     StayQuit => {
                         // If [Esc] was pressed, assume [Stay]
@@ -242,30 +264,7 @@ impl crate::app::App {
                             .add_sized([width, height / 2.0], Button::new("Quit"))
                             .clicked()
                         {
-                            // need to shutdown any remaining service
-                        for process in processes {
-                            if process.alive {
-                                process.stop(&self.helper);
-                            }
-                            }
-                            for process in processes {
-
-                                // a stop() should always put a service alive value to false
-                                // #[allow(clippy:while_immutable_condition)]
-                                 while match process.name {
-                                    crate::helper::ProcessName::Node => self.node.lock().unwrap().is_alive(),
-                                    crate::helper::ProcessName::P2pool => self.p2pool.lock().unwrap().is_alive(),
-                                    crate::helper::ProcessName::Xmrig => self.p2pool.lock().unwrap().is_alive(),
-                                    crate::helper::ProcessName::XmrigProxy => self.p2pool.lock().unwrap().is_alive(),
-                                    crate::helper::ProcessName::Xvb => self.xvb.lock().unwrap().is_alive()
-                                } {
-                                    sleep(Duration::from_millis(100));
-                                }
-                            }
-                            if self.state.gupax.auto.save_before_quit {
-                                self.save_before_quit();
-                            }
-                            exit(0);
+                            self.request_quit();
                         }
                     }
                     // This code handles the [state.toml/node.toml] resetting, [panic!]'ing if it errors once more
@@ -359,7 +358,8 @@ impl crate::app::App {
                     }
                     Quit => {
                         if ui.add_sized([width, height], Button::new("Quit")).clicked() {
-                            exit(1);
+                            // Nothing is saved: the files the error is about stay unchanged.
+                            crate::tray::request(crate::tray::TrayCmd::Exit(1));
                         }
                     }
                     WarnUpdate(data) => {

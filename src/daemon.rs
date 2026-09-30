@@ -1,20 +1,37 @@
-use std::{io, process::exit, thread::sleep, time::Duration};
+use std::{
+    io,
+    process::exit,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread::sleep,
+    time::Duration,
+};
 
 use crate::{
     app::{App, AppEgui},
-    helper::{Helper, xvb::nodes::Pool},
+    helper::xvb::nodes::Pool,
 };
 
 pub fn start_daemon(app: AppEgui) {
     // if the app receives Ctrl+C, make sure to terminate all services
     let app_ctrlc = app.clone();
+    // ctrlc runs its handlers one after another on one thread, so the
+    // shutdown runs on a thread of its own, and the next signal (a second
+    // Ctrl+C, a SIGTERM) exits right away.
+    let shutting_down = Arc::new(AtomicBool::new(false));
     ctrlc::set_handler(move || {
-        Helper::stop_xvb(&app_ctrlc.inner.lock().helper);
-        Helper::stop_xmrig(&app_ctrlc.inner.lock().helper);
-        Helper::stop_xp(&app_ctrlc.inner.lock().helper);
-        Helper::stop_p2pool(&app_ctrlc.inner.lock().helper);
-        Helper::stop_node(&app_ctrlc.inner.lock().helper);
-        exit(0);
+        if shutting_down.swap(true, Ordering::SeqCst) {
+            eprintln!("Interrupted again, leaving the started processes running.");
+            exit(1);
+        }
+        println!("Stopping the started processes, press Ctrl+C again to give up waiting.");
+        let app = app_ctrlc.clone();
+        std::thread::spawn(move || {
+            let wait = app.inner.lock().stop_all();
+            wait.wait();
+        });
     })
     .expect("Error setting Ctrl-C handler");
     loop {

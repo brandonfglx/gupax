@@ -659,7 +659,7 @@ impl Helper {
         debug!("P2Pool | Setting process state...");
         let mut lock = process.lock().unwrap();
         lock.state = ProcessState::Syncing;
-        lock.signal = ProcessSignal::None;
+        lock.reset_signal_on_start();
         lock.start = Instant::now();
         let mut stdin: Box<dyn IoWrite + Send> = Box::new(stdin_writer);
         drop(lock);

@@ -577,7 +577,7 @@ impl Helper {
         debug!("XMRig | Setting process state...");
         let mut lock = process.lock().unwrap();
         lock.state = ProcessState::NotMining;
-        lock.signal = ProcessSignal::None;
+        lock.reset_signal_on_start();
         lock.start = Instant::now();
         drop(lock);
 

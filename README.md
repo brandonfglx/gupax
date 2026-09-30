@@ -81,7 +81,7 @@ A more detailed documentation for advanced users and developers
 To come !
 
 ## Tabs
-Each service tab can be hidden in the settings (Gupax tab). Only the `P2Pool` and `XMRig` tabs are enabled by default to make Gupax more simple to new users.
+Each service tab can be hidden in the Settings tab. Only the `P2Pool` and `XMRig` tabs are enabled by default to make Gupax more simple to new users.
 ### Simple/Advanced
 Each services offers a simple sub-menu (accessible on the bottom bar). The simple mode will start the service with default working out of the box settings. The advanced mode allows powerful users to configure each services to correspond to their needs.
 ### About
@@ -90,7 +90,7 @@ The About tab will show you a brief description of Gupax, along with the availab
 ### Status
 This tab has three sub-menus. By default the `Processes` sub-menu will appear.
 #### Processes
-Monitoring of every services, as well as displaying resources usage of the system. You can hide the column of a service by checking the Gupax tab.
+Monitoring of every services, as well as displaying resources usage of the system. You can hide the column of a service in the Settings tab.
 ![Processes Tab](assets/images/tabs/processes.png)
 #### Payouts
 You can see rewards that you were paid. You also have a tool to calculate rewards based on your hashrate. The calculator needs P2Pool to be synced so it has the needed data up to date.

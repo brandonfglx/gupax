@@ -196,8 +196,8 @@ impl Update {
             );
             if update.is_update_available(&binaries_version) {
                 match update.spawn_update_versions(&binaries, &gupax_settings, &binaries_version) {
-                    Ok(_) => {
-                        if !update.lock().unwrap().msg.contains("already up to date") {
+                    Ok(updated) => {
+                        if updated {
                             if !gupax_settings.updates.automatic_restart {
                                 notif(
                                     "A binary has been updated, you need to restart Gupax to apply the change",
@@ -328,8 +328,8 @@ impl Update {
         thread::spawn(move || {
             update.lock().unwrap().updating = true;
             match update.spawn_update_versions(&binaries, &gupax_settings, &binaries_version) {
-                Ok(_) => {
-                    if !update.lock().unwrap().msg.contains("already up to date") {
+                Ok(updated) => {
+                    if updated {
                         if !gupax_settings.updates.automatic_restart {
                             notif(
                                 "A binary has been updated, you need to restart Gupax to apply the change",
@@ -349,16 +349,18 @@ impl Update {
         });
     }
 
+    // Returns whether a binary was updated.
     #[tokio::main]
     async fn spawn_update_versions(
         &self,
         binaries: &Vec<String>,
         gupax_settings: &Gupax,
         binaries_version: &BinariesVersion,
-    ) -> Result<(), UpdateError> {
+    ) -> Result<bool, UpdateError> {
         let client = self.lock().unwrap().client.clone();
         let part_progress = 100.0 / binaries.len() as f32;
         self.lock().unwrap().prog = 0.0;
+        let mut updated = false;
         for name in binaries {
             let source = gupax_settings.updates.source_by_name(name);
             let selected_version = gupax_settings.updates.selected_version_by_name(name);
@@ -461,8 +463,9 @@ impl Update {
             };
             self.lock().unwrap().prog += part_progress / 2.0;
             self.lock().unwrap().msg = format!("Done updating {name}");
+            updated = true;
         }
-        Ok(())
+        Ok(updated)
     }
 
     pub fn get_version_binary(path: &Path) -> Result<String, std::io::Error> {

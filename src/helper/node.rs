@@ -313,21 +313,21 @@ impl Helper {
             {
                 // scope to drop locked mutex before the sleep
                 // check state
-                if let Some(child) = &child_pty
-                    && check_died(
+                let died = match &child_pty {
+                    Some(child) => check_died(
                         child,
                         &mut process.lock().unwrap(),
                         &start,
                         &mut gui_api.lock().unwrap().output,
-                    )
-                {
-                    break;
-                } else if check_died_process(
-                    &mut process.lock().unwrap(),
-                    &start,
-                    &mut gui_api.lock().unwrap().output,
-                    &mut sys.lock().unwrap(),
-                ) {
+                    ),
+                    None => check_died_process(
+                        &mut process.lock().unwrap(),
+                        &start,
+                        &mut gui_api.lock().unwrap().output,
+                        &mut sys.lock().unwrap(),
+                    ),
+                };
+                if died {
                     break;
                 }
                 // check signal

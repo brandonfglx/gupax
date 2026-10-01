@@ -159,8 +159,12 @@ impl App {
                  let updating = self.update.lock().unwrap().updating;
         ui.add_enabled_ui(!updating, |ui|{
         if ui.button("Update Everything").on_hover_text("Update all binaries to the latest release").clicked() {
-            self.update
-                .update_all(self.state.gupax.clone(), self.binaries_version.clone(), self.restart.clone());
+            self.update.update_all(
+                BINARIES_NAME.into_iter().map(|s| s.to_string()).collect(),
+                self.state.gupax.clone(),
+                self.binaries_version.clone(),
+                self.restart.clone(),
+            );
         }
         });
             });

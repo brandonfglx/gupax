@@ -152,6 +152,7 @@ impl Update {
     }
     pub fn update_all(
         &self,
+        binaries: Vec<String>,
         mut gupax_settings: Gupax,
         binaries_version: BinariesVersion,
         restart: Arc<Mutex<bool>>,
@@ -159,7 +160,6 @@ impl Update {
         let update = self.clone();
         thread::spawn(move || {
             update.lock().unwrap().updating = true;
-            let binaries = BINARIES_NAME.into_iter().map(|s| s.to_string()).collect();
             if let Err(e) =
                 update.spawn_refresh_versions(&binaries, &gupax_settings, &binaries_version)
             {
@@ -299,8 +299,10 @@ impl Update {
                 .json::<Vec<Release>>()
                 .await?;
 
+            let current_version = binaries_version.version_by_name(name);
             if let Some(v) = updated_versions.first()
-                && v.tag_name != binaries_version.version_by_name(name)
+                && !current_version.is_empty()
+                && v.tag_name != current_version
             {
                 // there is a new version, send a notification
                 notif(&format!(

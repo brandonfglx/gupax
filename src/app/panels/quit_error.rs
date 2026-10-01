@@ -373,7 +373,7 @@ impl crate::app::App {
                     self.ask_download_start_acknowledge = true;
                     self.state.gupax.submenu = SubmenuGupax::Updates;
                     self.tab = Tab::Settings;
-                    self.update.update_version(
+                    self.update.update_all(
                         data.name.split(" ").map(|s|s.to_string()).collect(),
                         self.state.gupax.clone(),
                         self.binaries_version.clone(),

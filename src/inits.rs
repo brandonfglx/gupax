@@ -355,6 +355,7 @@ pub fn init_auto(app: &mut App) {
         thread::spawn(move || {
             loop {
                 update.update_all(
+                    BINARIES_NAME.into_iter().map(|s| s.to_string()).collect(),
                     gupax_settings.clone(),
                     binaries_version.clone(),
                     restart.clone(),

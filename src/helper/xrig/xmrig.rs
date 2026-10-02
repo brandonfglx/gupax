@@ -251,6 +251,9 @@ impl Helper {
             let lock = helper.lock().unwrap();
             let mut xmrig_image = lock.img_xmrig.lock().unwrap();
             for arg in state.arguments.split_whitespace() {
+                if let Some(token) = arg.strip_prefix("--http-access-token=") {
+                    xmrig_image.token = token.to_string();
+                }
                 match last {
                     "--threads" => xmrig_image.threads = arg.to_string(),
                     "--url" => xmrig_image.url = arg.to_string(),
@@ -264,9 +267,6 @@ impl Helper {
                     "--http-port" => {
                         api_port = arg.to_string();
                         xmrig_image.api_port = arg.parse().unwrap_or(XMRIG_API_PORT_DEFAULT)
-                    }
-                    l if l.contains("--http-access-token=") => {
-                        xmrig_image.token = l.split_once("=").unwrap().1.to_string();
                     }
                     _ => (),
                 }

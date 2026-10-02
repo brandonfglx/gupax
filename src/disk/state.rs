@@ -915,20 +915,20 @@ impl Node {
             for arg in self.arguments.split_whitespace() {
                 match last {
                     "--zmq-pub" => {
-                        zmq_port = last
+                        zmq_port = arg
                             .split(":")
                             .last()
                             .unwrap_or(&NODE_ZMQ_PORT_DEFAULT.to_string())
                             .parse()
                             .unwrap_or(NODE_ZMQ_PORT_DEFAULT);
                     }
-                    "--rpc-bind-port" => zmq_port = last.parse().unwrap_or(NODE_RPC_PORT_DEFAULT),
+                    "--rpc-bind-port" => rpc_port = arg.parse().unwrap_or(NODE_RPC_PORT_DEFAULT),
                     _ => (),
                 }
                 last = arg;
             }
         } else {
-            zmq_port = if self.api_port.is_empty() {
+            zmq_port = if self.zmq_port.is_empty() {
                 NODE_ZMQ_PORT_DEFAULT
             } else {
                 self.zmq_port.parse().unwrap_or(NODE_ZMQ_PORT_DEFAULT)
@@ -983,7 +983,7 @@ impl P2pool {
             let mut last = "";
             for arg in self.arguments.split_whitespace() {
                 if last == "--stratum" {
-                    return last
+                    return arg
                         .split(":")
                         .last()
                         .unwrap_or(&P2POOL_PORT_DEFAULT.to_string())
@@ -1029,8 +1029,8 @@ impl XmrigProxy {
         } else if !self.arguments.is_empty() {
             let mut last = "";
             for arg in self.arguments.split_whitespace() {
-                if last == "--http-host" {
-                    return last.parse().unwrap_or(PROXY_API_PORT_DEFAULT);
+                if last == "--http-port" {
+                    return arg.parse().unwrap_or(PROXY_API_PORT_DEFAULT);
                 }
                 last = arg;
             }
@@ -1047,7 +1047,7 @@ impl XmrigProxy {
             let mut last = "";
             for arg in self.arguments.split_whitespace() {
                 if last == "--bind" || last == "-b" {
-                    return last
+                    return arg
                         .split(":")
                         .last()
                         .unwrap_or_default()

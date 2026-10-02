@@ -232,20 +232,20 @@ impl Helper {
             let lock = helper.lock().unwrap();
             let mut proxy_image = lock.img_proxy.lock().unwrap();
             for arg in state.arguments.split_whitespace() {
+                if let Some(token) = arg.strip_prefix("--http-access-token=") {
+                    proxy_image.token = token.to_string();
+                }
                 match last {
                     "--bind" | "-b" => {
-                        proxy_image.port = last
+                        proxy_image.port = arg
                             .split(":")
                             .last()
                             .unwrap_or_default()
                             .parse()
                             .unwrap_or(PROXY_PORT_DEFAULT);
                     }
-                    "--http-host" => {
-                        proxy_image.api_port = last.parse().unwrap_or(PROXY_API_PORT_DEFAULT)
-                    }
-                    l if l.contains("--http-access-token=") => {
-                        proxy_image.token = l.split_once("=").unwrap().1.to_string();
+                    "--http-port" => {
+                        proxy_image.api_port = arg.parse().unwrap_or(PROXY_API_PORT_DEFAULT)
                     }
                     _ => {}
                 }

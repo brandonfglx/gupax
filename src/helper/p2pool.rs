@@ -425,15 +425,12 @@ impl Helper {
             let mut p2pool_image = lock.img_p2pool.lock().unwrap();
             let mut chain = P2poolChain::Main;
             for arg in state.arguments.split_whitespace() {
+                match arg {
+                    "--mini" => chain = P2poolChain::Mini,
+                    "--nano" => chain = P2poolChain::Nano,
+                    _ => (),
+                }
                 match last {
-                    "--mini" => {
-                        chain = P2poolChain::Mini;
-                        p2pool_image.chain = chain.to_string();
-                    }
-                    "--nano" => {
-                        chain = P2poolChain::Nano;
-                        p2pool_image.chain = chain.to_string();
-                    }
                     // used for nano chain, Gupax will not recognize another custom chain
                     "--sidechain-config" => {
                         chain = P2poolChain::Nano;
@@ -444,7 +441,7 @@ impl Helper {
                     "--in-peers" => p2pool_image.in_peers = arg.to_string(),
                     "--data-api" => api_path = PathBuf::from(arg),
                     "--stratum" => {
-                        p2pool_image.stratum_port = last
+                        p2pool_image.stratum_port = arg
                             .split(":")
                             .last()
                             .unwrap_or(&P2POOL_PORT_DEFAULT.to_string())

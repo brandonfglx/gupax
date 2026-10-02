@@ -567,13 +567,8 @@ impl ImgNode {
                 let mut img = ImgNode::default();
                 for arg in state.arguments.split_whitespace() {
                     match last {
-                        "--zmq-rpc-bind-port" => {
-                            if let Ok(port) = arg.parse::<u16>() {
-                                img.zmq_port = port
-                            }
-                        }
                         "--zmq-pub" => {
-                            if let Some(port_str) = last.split(":").last()
+                            if let Some(port_str) = arg.split(":").last()
                                 && let Ok(port) = port_str.parse::<u16>()
                             {
                                 img.zmq_port = port;

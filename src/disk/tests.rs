@@ -194,6 +194,46 @@ mod test {
     }
 
     #[test]
+    fn ports_of_custom_arguments() {
+        use crate::app::submenu_enum::SubmenuP2pool;
+        use crate::disk::state::{Node as NodeState, P2pool, StartOptionsMode, XmrigProxy};
+        use crate::helper::node::ImgNode;
+
+        // The ZMQ RPC port is another socket than the ZMQ publisher P2Pool uses.
+        let node = NodeState {
+            simple: false,
+            arguments:
+                "--zmq-pub tcp://127.0.0.1:18084 --rpc-bind-port 18089 --zmq-rpc-bind-port 18082"
+                    .to_string(),
+            ..NodeState::default()
+        };
+        assert_eq!(node.ports(), (18089, 18084));
+        let img = ImgNode::new(&node, &StartOptionsMode::Custom);
+        assert_eq!((img.rpc_port, img.zmq_port), (18089, 18084));
+        let node = NodeState {
+            simple: false,
+            api_port: String::new(),
+            zmq_port: "18084".to_string(),
+            ..NodeState::default()
+        };
+        assert_eq!(node.ports().1, 18084);
+
+        let p2pool = P2pool {
+            submenu: SubmenuP2pool::Advanced,
+            arguments: "--stratum 0.0.0.0:3334 --mini".to_string(),
+            ..P2pool::default()
+        };
+        assert_eq!(p2pool.stratum_port(), 3334);
+
+        let proxy = XmrigProxy {
+            simple: false,
+            arguments: "--bind 0.0.0.0:3356 --http-host 127.0.0.1 --http-port 18089".to_string(),
+            ..XmrigProxy::default()
+        };
+        assert_eq!((proxy.bind_port(), proxy.api_port()), (3356, 18089));
+    }
+
+    #[test]
     fn convert_hash() {
         use crate::disk::status::Hash;
         let hash = 1.0;

@@ -405,8 +405,7 @@ impl Helper {
         helper: &Arc<Mutex<Self>>,
         path: &Path,
     ) -> (PathBuf, PathBuf, PathBuf, PathBuf) {
-        let path = path.to_path_buf();
-        let mut api_path = path;
+        let mut api_path = path.to_path_buf();
         api_path.pop();
         let simple = state.submenu != SubmenuP2pool::Advanced;
         if simple {
@@ -439,7 +438,7 @@ impl Helper {
                     "--wallet" => p2pool_image.address = Self::head_tail_of_monero_address(arg),
                     "--out-peers" => p2pool_image.out_peers = arg.to_string(),
                     "--in-peers" => p2pool_image.in_peers = arg.to_string(),
-                    "--data-api" => api_path = PathBuf::from(arg),
+                    "--data-api" => api_path = path.parent().unwrap_or(path).join(arg),
                     "--stratum" => {
                         p2pool_image.stratum_port = arg
                             .split(":")

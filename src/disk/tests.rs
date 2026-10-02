@@ -234,6 +234,21 @@ mod test {
     }
 
     #[test]
+    fn local_node_ports_in_p2pool_default_arguments() {
+        use crate::disk::state::{P2pool, StartOptionsMode};
+
+        let p2pool = P2pool {
+            local_node: true,
+            ..P2pool::default()
+        };
+        let backup_nodes = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let path = std::path::Path::new("");
+        let args =
+            p2pool.start_options(path, &backup_nodes, StartOptionsMode::Simple, 18084, 18089);
+        assert!(args.contains("--host 127.0.0.1 --rpc-port 18089 --zmq-port 18084"));
+    }
+
+    #[test]
     fn convert_hash() {
         use crate::disk::status::Hash;
         let hash = 1.0;

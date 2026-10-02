@@ -967,8 +967,8 @@ impl P2pool {
             path,
             &backup_nodes.lock().unwrap(),
             false,
-            local_node_rpc_port,
             local_node_zmq_port,
+            local_node_rpc_port,
             mode,
         )
         .join(" ")
